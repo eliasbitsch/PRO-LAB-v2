@@ -73,3 +73,23 @@ To complete the assignment, you have to:
 ## Task Assignments
 
 2510331021 | **Wrong Initialization**                                                  | Initialize the filter with an incorrect starting pose and/or uncertainty.         |
+
+## Ideas / Notes
+
+- **PRO Terminal GUI**: Build a terminal launcher / status banner for PRO similar to FastMCP's startup screen
+  (boxed ASCII banner showing project name, version, server/node status, useful URLs).
+  Example reference (FastMCP 3.2.4):
+
+  ```
+  ╭──────────────────────────────────────────────────────────────────────────────╮
+  │                         ▄▀▀ ▄▀█ █▀▀ ▀█▀ █▀▄▀█ █▀▀ █▀█                        │
+  │                         █▀  █▀█ ▄▄█  █  █ ▀ █ █▄▄ █▀▀                        │
+  │                                FastMCP 3.2.4                                 │
+  │                            https://gofastmcp.com                             │
+  │                 🖥  Server:      mcp-for-unity-server, 3.2.4                  │
+  ╰──────────────────────────────────────────────────────────────────────────────╯
+  ```
+
+  For PRO this could show: active filter node (KF/EKF/PF), ROS2 domain ID, TurtleBot4 connection state,
+  RViz/topic links, and current experiment config.
+
