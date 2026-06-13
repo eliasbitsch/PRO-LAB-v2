@@ -40,7 +40,7 @@ banner() {
   printf "    %b██║     ██║  ██║╚██████╔╝     ███████╗██║  ██║██████╔╝%b\n" "$g5" "$R"
   printf "    %b╚═╝     ╚═╝  ╚═╝ ╚═════╝      ╚══════╝╚═╝  ╚═╝╚═════╝ %b\n" "$g6" "$R"
   echo
-  printf "    %bProbabilistic Robotics%b  %b·%b  %bWrong-Initialization Study%b\n" \
+  printf "    %bProbabilistic Robotics%b  %b·%b  %bWrong Initialization%b\n" \
          "$B$CY" "$R" "$D" "$R" "$B$MG" "$R"
   printf "    %b────────────────────────────────────────────────────────────%b\n" "$D" "$R"
   printf "      %bTask%b       2510331021 · Wrong Initialization\n" "$D" "$R"
@@ -58,9 +58,8 @@ menu() {
   printf "     %b2%b  Single run       one scenario + filters, writes CSV + opens plots\n" "$CY" "$R"
   printf "     %b3%b  Multi-seed sweep 7 scenarios × 10 seeds (~90 min, the paper data)\n" "$CY" "$R"
   printf "     %b4%b  Analyze + plots  regenerate all plots from the sweep results\n" "$CY" "$R"
-  printf "     %b5%b  Build paper      compile the IEEE paper PDF\n" "$CY" "$R"
   printf "   %bUtilities%b\n" "$B" "$R"
-  printf "     %bp%b  Provision        enable camera + install AprilTag lib in container\n" "$CY" "$R"
+  printf "     %bk%b  Kill sim         stop the running simulation and all nodes\n" "$CY" "$R"
   printf "     %bq%b  Quit\n" "$CY" "$R"
   echo
   printf "   %bselect ▸ %b" "$B" "$R"
@@ -77,6 +76,15 @@ demo_help() {
   printf "   %b└────────────────────────────────────────────────────────────┘%b\n\n" "$MG" "$R"
 }
 
+kill_sim() {
+  printf "\n   stopping the simulation (clean container reset)…\n"
+  if docker restart "$CONTAINER" >/dev/null 2>&1; then
+    printf "   %bsim stopped%b — container idle, ready to launch again\n" "$GR" "$R"
+  else
+    printf "   %bcould not reach container %s%b\n" "$RE" "$CONTAINER" "$R"
+  fi
+}
+
 pause() { printf "\n   %bpress Enter to return to the menu…%b" "$D" "$R"; read -r _; }
 
 while true; do
@@ -91,8 +99,7 @@ while true; do
        [[ "${ok:-}" == "y" ]] && bash "$HERE/run_wrong_init_sweep.sh"; pause ;;
     4) python3 "$HERE/analyze_results.py" --in "$HERE/../results/sweep" \
          --out "$HERE/../results/wrong_init/plots" && bash "$HERE/copy_fav_plots.sh"; pause ;;
-    5) ( cd "$HERE/../ProbRob_Paper_Template_Englisch" && bash build.sh paper ) ; pause ;;
-    p|P) docker exec -u 0 "$CONTAINER" bash /home/ros/ws/src/pro_lab_filters/scripts/provision_container.sh; pause ;;
+    k|K) kill_sim; pause ;;
     q|Q|"") clear; printf "%bbye 👋%b\n" "$CY" "$R"; exit 0 ;;
     *) ;;
   esac

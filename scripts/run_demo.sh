@@ -46,6 +46,10 @@ echo "── clean container restart (no stale nodes) ──"
 docker restart "$CONTAINER" >/dev/null 2>&1
 sleep 4
 
+# AprilTags are always on: provision (camera + libapriltag) is idempotent, so
+# this is a no-op once done but guarantees the tags work after an image rebuild.
+docker exec -u 0 "$CONTAINER" bash /home/ros/ws/src/pro_lab_filters/scripts/provision_container.sh >/dev/null 2>&1 || true
+
 echo "── launching demo (Gazebo GUI + RViz + KF/EKF/EKF-LF/PF + AMCL, MANUAL) ──"
 echo "   drive with the Teleop panel, kidnap with the Kidnap tool,"
 echo "   help PF/AMCL with 2D Pose Estimate. KF/EKF recover by themselves."
