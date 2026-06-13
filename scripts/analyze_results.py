@@ -524,7 +524,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
         plt.close(fig)
 
     # Trajectory (xy paths) - overlay every seed thinly per filter; truth bold.
-    fig, ax = plt.subplots(figsize=(7, 7))
+    fig, ax = plt.subplots(figsize=(9, 9))
     truth_drawn = False
     for p in paths:
         ts = read_timeseries(p)
@@ -554,7 +554,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
     # above shows the spread, this one shows the comparison).
     ts0 = read_timeseries(paths[0])
     if "truth_x" in ts0:
-        fig, ax = plt.subplots(figsize=(7, 7))
+        fig, ax = plt.subplots(figsize=(9, 9))
         tx, ty = _break_jumps(ts0["truth_x"], ts0["truth_y"])
         ax.plot(tx, ty, color="k", lw=2.6, label="truth", zorder=10)
         for f in filters:
@@ -613,7 +613,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
             xk, yk, ck = f"{f}_x", f"{f}_y", f"{f}_cov"
             if xk not in ts or yk not in ts:
                 continue
-            fig, ax = plt.subplots(figsize=(7.5, 7))
+            fig, ax = plt.subplots(figsize=(9.5, 8.5))
             col = COLOURS.get(f, "gray")
             tx, ty = _break_jumps(ts["truth_x"], ts["truth_y"])
             fx, fy = _break_jumps(ts[xk], ts[yk])
@@ -811,9 +811,13 @@ def grouped_bar(scenarios, values_per_filter, errors_per_filter, filters,
         label = f.upper()
         if label_suffix and f in label_suffix:
             label = f"{label}  {label_suffix[f]}"
+        # Draw error bars only when there is real spread; raise their zorder so
+        # the whiskers/caps sit ON TOP of the bars instead of hiding behind them.
+        yerr = errs if any(e > 0 for e in errs) else None
         ax.bar(x + (i - (n - 1) / 2) * w, means, w,
-               yerr=errs, capsize=2,
-               color=COLOURS.get(f, "gray"), label=label)
+               yerr=yerr, capsize=3,
+               error_kw=dict(zorder=6, elinewidth=1.2, capthick=1.2, ecolor="0.15"),
+               color=COLOURS.get(f, "gray"), label=label, zorder=3)
     ax.set_xticks(x)
     ax.set_xticklabels(scenarios, rotation=30, ha="right")
     ax.set_ylabel(ylabel)
