@@ -39,6 +39,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
@@ -62,6 +63,25 @@ public:
     declare_parameter("q_scale", 0.05);
     declare_parameter("r_yaw_imu", 0.02);
     declare_parameter("frame_id", std::string("odom"));
+    // Dead-reckoning twin support: with both flags false this node becomes a
+    // pure odometry integrator (predict-only). Used as `ekf_dr` in the launch
+    // to produce the lecture-style "odometry drift + growing uncertainty"
+    // baseline for the explainer plots — real integration, not a mock-up.
+    declare_parameter("use_imu",       true);
+    declare_parameter("use_landmarks", true);
+    declare_parameter("topic_prefix",  std::string("/ekf"));
+    // Velocity source for the predict step:
+    //   "odom"            — measured wheel-encoder velocity (Thrun §5.4,
+    //                       odometry motion model). Default; all comparison
+    //                       filters use this.
+    //   any other string  — treated as a Twist topic carrying COMMANDED
+    //                       velocity (Thrun §5.3, velocity motion model).
+    //                       Used by the ekf_dr twin with "/cmd_vel_in":
+    //                       integrating the command instead of the encoder
+    //                       exposes the real cmd-vs-actual mismatch
+    //                       (acceleration ramps, wheel slip during pivots)
+    //                       as honest, visible dead-reckoning drift.
+    declare_parameter("velocity_source", std::string("odom"));
     // Landmark fusion: same xs/ys/ids the landmark_detector_node uses.
     // r_landmark_range / r_landmark_bearing are measurement variances (= σ²).
     declare_parameter<std::vector<int64_t>>("landmark_ids",
@@ -100,17 +120,29 @@ public:
     r_yaw_imu_ = get_parameter("r_yaw_imu").as_double();
     frame_id_  = get_parameter("frame_id").as_string();
 
-    odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
-      "/odom", 20,
-      [this](nav_msgs::msg::Odometry::SharedPtr m) {
-        v_ = m->twist.twist.linear.x;
-        w_ = m->twist.twist.angular.z;
-      });
-    imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
-      "/imu", 20,
-      [this](sensor_msgs::msg::Imu::SharedPtr m) {
-        ekf_.updateImuYaw(pro_lab_filters::quat_to_yaw(m->orientation), r_yaw_imu_);
-      });
+    const auto vel_src = get_parameter("velocity_source").as_string();
+    if (vel_src == "odom") {
+      odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
+        "/odom", 20,
+        [this](nav_msgs::msg::Odometry::SharedPtr m) {
+          v_ = m->twist.twist.linear.x;
+          w_ = m->twist.twist.angular.z;
+        });
+    } else {
+      cmd_sub_ = create_subscription<geometry_msgs::msg::Twist>(
+        vel_src, 20,
+        [this](geometry_msgs::msg::Twist::SharedPtr m) {
+          v_ = m->linear.x;
+          w_ = m->angular.z;
+        });
+    }
+    if (get_parameter("use_imu").as_bool()) {
+      imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
+        "/imu", 20,
+        [this](sensor_msgs::msg::Imu::SharedPtr m) {
+          ekf_.updateImuYaw(pro_lab_filters::quat_to_yaw(m->orientation), r_yaw_imu_);
+        });
+    }
 
     // Build the {id → (lx, ly)} lookup for landmark updates.
     {
@@ -125,24 +157,29 @@ public:
     r_lm_range_   = get_parameter("r_landmark_range").as_double();
     r_lm_bearing_ = get_parameter("r_landmark_bearing").as_double();
 
-    landmarks_sub_ = create_subscription<std_msgs::msg::Float32MultiArray>(
-      "/landmarks/observations", 10,
-      [this](std_msgs::msg::Float32MultiArray::SharedPtr m) {
-        // Stride-3 (id, range, bearing) flat array.
-        for (std::size_t i = 0; i + 2 < m->data.size(); i += 3) {
-          const int    id      = static_cast<int>(m->data[i]);
-          const double range   = m->data[i + 1];
-          const double bearing = m->data[i + 2];
-          auto it = landmarks_.find(id);
-          if (it == landmarks_.end()) continue;
-          ekf_.updateLandmark(it->second.first, it->second.second,
-                              range, bearing,
-                              r_lm_range_, r_lm_bearing_);
-        }
-      });
+    if (get_parameter("use_landmarks").as_bool()) {
+      landmarks_sub_ = create_subscription<std_msgs::msg::Float32MultiArray>(
+        "/landmarks/observations", 10,
+        [this](std_msgs::msg::Float32MultiArray::SharedPtr m) {
+          // Stride-3 (id, range, bearing) flat array.
+          for (std::size_t i = 0; i + 2 < m->data.size(); i += 3) {
+            const int    id      = static_cast<int>(m->data[i]);
+            const double range   = m->data[i + 1];
+            const double bearing = m->data[i + 2];
+            auto it = landmarks_.find(id);
+            if (it == landmarks_.end()) continue;
+            ekf_.updateLandmark(it->second.first, it->second.second,
+                                range, bearing,
+                                r_lm_range_, r_lm_bearing_);
+          }
+        });
+    }
 
-    pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/ekf/pose", 10);
-    runtime_pub_ = create_publisher<std_msgs::msg::Float64>("/ekf/runtime_us", 10);
+    // Output prefix parameterised so a second instance (ekf_dr, the
+    // dead-reckoning twin) can publish /ekf_dr/pose alongside /ekf/pose.
+    const std::string prefix = get_parameter("topic_prefix").as_string();
+    pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(prefix + "/pose", 10);
+    runtime_pub_ = create_publisher<std_msgs::msg::Float64>(prefix + "/runtime_us", 10);
     timer_ = create_wall_timer(50ms, [this]() { tick(); });
   }
 
@@ -173,6 +210,7 @@ private:
   double r_yaw_imu_ = 0.02;
   std::string frame_id_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr landmarks_sub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pub_;

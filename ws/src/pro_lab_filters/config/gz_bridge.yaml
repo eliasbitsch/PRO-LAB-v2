@@ -61,3 +61,19 @@
   ros_type_name: "tf2_msgs/msg/TFMessage"
   gz_type_name: "gz.msgs.Pose_V"
   direction: GZ_TO_ROS
+
+# OAK-D RGB camera (resolution bumped to 1280x720 in the model so ArUco
+# markers stay readable across the ~7.5 m aisles). The aruco_landmark_detector
+# reads marker IDs from the image; camera_info gives the intrinsics needed to
+# turn a marker pixel into a bearing.
+- ros_topic_name: "/rgbd_camera/image"
+  gz_topic_name: "/rgbd_camera/image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/rgbd_camera/camera_info"
+  gz_topic_name: "/rgbd_camera/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS

@@ -14,11 +14,21 @@ FAVS=(
     rmse_comparison.png
     convergence_rate.png
     runtime_comparison.png
-    # Method illustration — lecture-style 3-panel
+    # Method illustration — lecture-style 3-panel, one per required filter
+    correct_init_kf_explainer.png
     correct_init_ekf_explainer.png
-    # Hero scenario stories
+    correct_init_pf_explainer.png
+    # Error vs uncertainty pairing: actual error over time (hero scenario)
+    # + the filters' own believed uncertainty (baseline scenario, incl. the
+    # unbounded dead-reckoning growth for contrast)
     wrong_yaw_pi2_error_xy.png
-    kidnapped_trajectory.png
+    correct_init_uncertainty.png
+    # Kidnapped: per-filter localization plots (K1/K2 markers + gradient paths)
+    kidnapped_kf_localization.png
+    kidnapped_ekf_localization.png
+    kidnapped_ekf_lf_localization.png
+    kidnapped_pf_localization.png
+    kidnapped_amcl_localization.png
     # Raw aggregate data for tables
     all_summaries.csv
 )

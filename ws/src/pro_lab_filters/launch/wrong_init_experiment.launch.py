@@ -173,20 +173,37 @@ def generate_launch_description():
     # structure → scan-based filters see no mismatch, landmark filters get
     # many anchors → richer triangulation, more robust to occlusion.
     # All shifted -0.10 m in y to align with the real orange pillars
-    landmark_coords = [
+    # Physical I-beam pillar coords (what the lidar/scan-likelihood filters see).
+    pillar_coords = [
         (-7.45, -15.02), ( 7.49, -15.02),
         (-7.42,  -7.55), ( 7.46,  -7.52),
         (-7.51,  -0.02), ( 7.43,  -0.02),
         (-7.45,   7.54), ( 7.43,   7.48),
     ]
-    # Single source of truth for the landmark map. The DETECTOR associates
-    # clusters to these, and the landmark-based filters (KF/EKF) look up each
-    # observed id here to triangulate. They MUST match or the filters jump.
+    # The AprilTag plates sit MARKER_OFFSET in front of each pillar toward the
+    # aisle (so the camera has line of sight). The localisation landmark is now
+    # the TAG, not the I-beam centre, so the KF/EKF map AND the detector's
+    # validation map use the MARKER coords — otherwise the camera (measuring to
+    # the tag) is biased ~0.3 m against a pillar-centre map. Sign: left column
+    # (x<0) offsets +x toward centre, right column -x.
+    MARKER_OFFSET = 0.6
+    marker_coords = [(x + (MARKER_OFFSET if x < 0 else -MARKER_OFFSET), y)
+                     for (x, y) in pillar_coords]
+
+    # Single source of truth for the landmark MAP (= marker positions). The
+    # KF/EKF look up each observed id here to triangulate; the detector uses it
+    # only to validate range/bearing against ground truth. id = index + 1.
     landmark_params = {
-        'landmark_ids': [i + 1 for i in range(len(landmark_coords))],
-        'landmark_xs':  [c[0] for c in landmark_coords],
-        'landmark_ys':  [c[1] for c in landmark_coords],
+        'landmark_ids': [i + 1 for i in range(len(marker_coords))],
+        'landmark_xs':  [c[0] for c in marker_coords],
+        'landmark_ys':  [c[1] for c in marker_coords],
     }
+    # Spawn the I-beam posts at the pillar coords, and an AprilTag plate (id =
+    # landmark id) at each marker coord. The plate's -x face (non-mirrored — see
+    # gen_marker_models.py) is turned into the aisle: yaw=pi for the left column
+    # (robot is at +x), yaw=0 for the right column. The detector READS these IDs
+    # off the camera — no ground-truth leak in the measurement.
+    aruco_dir = os.path.join(pkg_share, 'config', 'aruco')
     spawn_landmarks = TimerAction(period=7.0, actions=[
         Node(package='ros_gz_sim', executable='create',
              arguments=['-world', world, '-file', post_sdf,
@@ -194,7 +211,16 @@ def generate_launch_description():
                         '-x', f'{x}', '-y', f'{y}', '-z', '0',
                         '-Y', '1.5708'],   # rotate 90° to align with real pillars
              output='screen')
-        for i, (x, y) in enumerate(landmark_coords)
+        for i, (x, y) in enumerate(pillar_coords)
+    ] + [
+        Node(package='ros_gz_sim', executable='create',
+             arguments=['-world', world,
+                        '-file', os.path.join(aruco_dir, f'marker_{i + 1:02d}.sdf'),
+                        '-name', f'marker_{i + 1}',
+                        '-x', f'{mx}', '-y', f'{my}', '-z', '0',
+                        '-Y', f'{3.14159 if px < 0 else 0.0}'],
+             output='screen')
+        for i, ((mx, my), (px, _py)) in enumerate(zip(marker_coords, pillar_coords))
     ])
 
     # ros_gz_bridge: maps gz topics (/cmd_vel, /imu, /odom, /scan, /tf, /clock)
@@ -215,6 +241,12 @@ def generate_launch_description():
     # measurement channel (landmarks for KF/EKF, scan-likelihood for PF).
     # AMCL runs solely so its output can be logged alongside the filters
     # for the "our filters vs Nav2 standard" comparison plot.
+    # params_file: stock nav2 params with amcl.tf_broadcast=false. Our
+    # map_odom_tf_publisher owns map->odom (static, spawn-derived ground
+    # truth). If AMCL also broadcast it, the two would fight and — whenever
+    # AMCL is mislocalized, which is the POINT of the wrong-init scenarios —
+    # the landmark detector's association pose jumps metres off, the gate
+    # rejects every cluster, and KF/EKF silently lose their measurements.
     nav2 = TimerAction(period=8.0, actions=[
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -223,6 +255,8 @@ def generate_launch_description():
                 'use_sim_time': 'true',
                 'map': map_yaml,
                 'autostart': 'true',
+                'params_file': os.path.join(
+                    pkg_share, 'config', 'nav2_params_no_amcl_tf.yaml'),
             }.items(),
             condition=__import__('launch.conditions', fromlist=['IfCondition']).IfCondition(use_nav2),
         )
@@ -297,23 +331,29 @@ def generate_launch_description():
         }],
     )
 
-    # Landmark detector — assignment requires a self-defined landmark.
-    # Three vertical posts at known map coords; node simulates noisy
-    # range/bearing observations from /ground_truth/pose for filters that
-    # want to consume them, plus RViz markers so the posts are visible.
+    # Landmark detector — REAL camera-based AprilTag (36h11) detection. The OAK-D
+    # reads each pillar's marker ID and estimates its range/bearing from the
+    # image (no ground-truth leak in the measurement). Publishes the same
+    # /landmarks/observations [id, range, bearing] the KF/EKF already consume.
+    # landmark_params (the a-priori pillar map) is used ONLY to publish a
+    # validation error against ground truth — never to label/associate.
     landmark_detector = Node(
         package='pro_lab_filters',
-        executable='landmark_detector_node',
-        name='landmark_detector',
+        executable='apriltag_landmark_detector_node',
+        name='apriltag_landmark_detector',
         output='screen',
         parameters=[{
             'use_sim_time': True,
             **landmark_params,
-            'range_sigma':   0.10,
-            'bearing_sigma': 0.05,
-            'max_range':    10.0,
-            'frame_id':      'map',
-            'rate_hz':       5.0,
+            'image_topic':       '/rgbd_camera/image',
+            'camera_info_topic': '/rgbd_camera/camera_info',
+            'optical_frame':     'oakd_rgb_camera_optical_frame',
+            'base_frame':        'base_footprint',
+            'tag_size':           0.588,
+            'max_range':          9.0,
+            'frame_id':          'map',
+            # dir with marker_NN.dae (+ .png) for the RViz tag-image markers
+            'marker_mesh_dir':   os.path.join(pkg_share, 'config', 'aruco'),
         }],
     )
 
@@ -385,6 +425,26 @@ def generate_launch_description():
                                            'rng_seed': seed,
                                            **landmark_params}],
                output='screen', condition=IfCondition(run_ekf))
+    # Dead-reckoning twin: same EKF binary, but predict-only (no IMU, no
+    # landmarks). Provides the honest "dead reckoning drifts, uncertainty
+    # grows unbounded" baseline for the lecture-style explainer plots
+    # (panels 1+2), against which panel 3 shows what landmarks buy.
+    #
+    # velocity_source /cmd_vel_in: the twin integrates COMMANDED velocity
+    # (Thrun §5.3 velocity motion model) instead of the encoder. The real
+    # cmd-vs-actual mismatch (accel ramps, wheel slip during pivots) then
+    # shows up as genuine, clearly visible drift — no synthetic noise.
+    # /cmd_vel_in (pre-watchdog) carries only the trajectory_player script,
+    # so nav2's bring-up /cmd_vel spam cannot contaminate the twin.
+    ekf_dr = Node(package='pro_lab_filters', executable='ekf_node', name='ekf_dr_node',
+                  parameters=[scenario_file, {'frame_id': 'map',
+                                              'use_sim_time': True,
+                                              'rng_seed': seed,
+                                              'use_imu': False,
+                                              'use_landmarks': False,
+                                              'velocity_source': '/cmd_vel_in',
+                                              'topic_prefix': '/ekf_dr'}],
+                  output='screen', condition=IfCondition(run_ekf))
     # EKF-LF: advanced variant with direct scan-likelihood update. Frame is
     # 'map' because corrections come from the warehouse map directly, not
     # AMCL-on-odom.
@@ -404,9 +464,9 @@ def generate_launch_description():
     # we relay it onto /amcl/pose so metrics_node and csv_logger can treat
     # it like any other filter (subscribed under /<name>/pose convention).
     # topic_tools/relay isn't packaged for ros-jazzy on this container,
-    # so we ship a 20-line Python equivalent in scripts/amcl_relay.py.
+    # so we ship a small C++ equivalent (src/amcl_relay_node.cpp).
     amcl_relay = Node(
-        package='pro_lab_filters', executable='amcl_relay.py', name='amcl_relay',
+        package='pro_lab_filters', executable='amcl_relay_node', name='amcl_relay',
         condition=IfCondition(use_amcl),
         parameters=[{'use_sim_time': True}],
         output='screen',
@@ -415,7 +475,7 @@ def generate_launch_description():
     # shot from the scenario YAML so AMCL starts from the same (possibly
     # wrong) pose as the in-house filters — that's the whole comparison.
     amcl_init_pose = Node(
-        package='pro_lab_filters', executable='amcl_init_pose.py',
+        package='pro_lab_filters', executable='amcl_init_pose_node',
         name='amcl_init_pose',
         parameters=[scenario_file, {'use_sim_time': True, 'frame_id': 'map'}],
         condition=IfCondition(use_amcl),
@@ -427,7 +487,7 @@ def generate_launch_description():
     # warps. start_delay_s matches trajectory_player so kidnap times are
     # "seconds into scripted motion".
     auto_kidnapper = Node(
-        package='pro_lab_filters', executable='auto_kidnapper.py',
+        package='pro_lab_filters', executable='auto_kidnapper_node',
         name='auto_kidnapper',
         parameters=[scenario_file, {
             'use_sim_time': True,
@@ -478,19 +538,19 @@ def generate_launch_description():
                    parameters=[{'use_sim_time': True,
                                 'convergence_threshold_xy': 0.20,
                                 'convergence_window_s': 2.0,
-                                'filters': ['kf', 'ekf', 'ekf_lf', 'pf', 'amcl']}],
+                                'filters': ['kf', 'ekf', 'ekf_lf', 'pf', 'amcl', 'ekf_dr']}],
                    output='screen')
-    csv_logger = Node(package='pro_lab_filters', executable='csv_logger.py',
+    csv_logger = Node(package='pro_lab_filters', executable='csv_logger_node',
                       name='csv_logger',
                       parameters=[{'use_sim_time': True,
                                    'scenario': scenario,
                                    'out_dir': out_dir,
                                    'seed': seed,
-                                   'filters': ['kf', 'ekf', 'ekf_lf', 'pf', 'amcl']}],
+                                   'filters': ['kf', 'ekf', 'ekf_lf', 'pf', 'amcl', 'ekf_dr']}],
                       output='screen')
 
     filters_group = TimerAction(period=10.0, actions=[
-        kf, ekf, ekf_lf, pf, amcl_relay, amcl_init_pose, auto_kidnapper, trajectory_player,
+        kf, ekf, ekf_dr, ekf_lf, pf, amcl_relay, amcl_init_pose, auto_kidnapper, trajectory_player,
         truth, metrics, csv_logger,
     ])
 

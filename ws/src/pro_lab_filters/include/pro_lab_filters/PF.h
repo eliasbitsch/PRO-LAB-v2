@@ -401,10 +401,13 @@ private:
     // Augmented-MCL trigger: inject_prob > 0 means short-term avg
     // likelihood is below long-term avg → resample anyway, so the
     // injection step actually runs and the filter can recover.
-    // 0.07 — sweet spot between "ignore scan noise when localised"
-    // (= 0.05 was too low, jittered) and "actually trigger on a real
-    // likelihood drop after kidnap" (= 0.10 was too high, never recovered).
-    if (ess() < N_ / 2.0 || inject_prob_ > 0.07) {
+    // Threshold 0.02: in our pillar-grid warehouse the scan likelihood
+    // only drops mildly after a kidnap (translational aliasing — a pose
+    // shifted by the 7.5 m grid period explains the scan almost equally
+    // well), so inject_prob rarely exceeds ~0.05. Trigger early and let
+    // the injected particles + IMU yaw + landmark-free scan evidence
+    // fight it out.
+    if (ess() < N_ / 2.0 || inject_prob_ > 0.02) {
       resample();
     }
   }

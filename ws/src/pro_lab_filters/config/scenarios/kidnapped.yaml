@@ -19,6 +19,15 @@
     init_spread_yaw: 1.5
     init_cov:        100.0
 
+    # Augmented MCL (Thrun §8.3.3, Table 8.3): track the short-/long-term
+    # average scan likelihood (w_fast / w_slow) and inject uniform random
+    # particles when the scan stops matching the belief — the textbook
+    # recovery for exactly this scenario. Plain MCL structurally cannot
+    # recover (all hypotheses sit at the old pose; resampling cannot invent
+    # new locations). Enabled ONLY here: during normal driving the injection
+    # hurts more than it helps (documented in PF.h).
+    use_augmented_mcl: true
+
     # Auto-kidnap schedule (stride 4: t_s, x, y, yaw). Reproducible kidnap
     # events for headless batches — replaces the RViz Kidnap tool.
     # Times are seconds after the scripted motion starts (start_delay_s in

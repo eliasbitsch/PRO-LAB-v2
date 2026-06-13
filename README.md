@@ -1,139 +1,138 @@
-# PRO Lab — Probabilistic Robotics with ROS 2 & TurtleBot 4
+# PRO-LAB — Bad Beginnings 🤖
 
-KF, EKF and PF state estimation on a simulated TurtleBot 4 in the Nav2
-warehouse world, focused on the **Wrong Initialization** task.
+**Which localization filter survives a wrong start?** A controlled, reproducible
+comparison of five Bayesian filters (KF · EKF · EKF-LF · PF · AMCL) under seven
+*deliberately wrong* initializations on a TurtleBot 4 in a perceptually
+symmetric warehouse — ROS 2 Jazzy + Gazebo Harmonic.
 
-> Student: Elias Bitsch · Group 2B1 · Task ID 2510331007
+> **Finding:** the *observation model*, not the filter, decides recovery.
+> Filters that read **identifiable AprilTag landmarks** recover from large
+> offsets, wrong heading, and even double kidnapping; **scan-based** filters
+> (including the Nav2 AMCL baseline) are defeated by perceptual aliasing and
+> diverge by up to **17 m**. Yet under a *correct* start all five agree to
+> within 15 cm — so the landmark advantage is specifically **robustness to bad
+> initialization**, not nominal accuracy.
+
+> Elias Bitsch · FH Technikum Wien · Group 2B1 · Task **2510331021 — Wrong Initialization**
 
 ---
 
-## What's in here
+## The result (RMSE_xy [m], mean ± 1σ over 10 seeds)
+
+| Scenario | KF 🟦 | EKF 🟩 | EKF-LF 🟪 | PF 🟥 | AMCL 🟧 |
+|---|---|---|---|---|---|
+| `correct_init` | **0.11** | 0.14 | 0.15 | 0.14 | 0.15 |
+| `offset_5m` | **0.30** | 0.30 | 5.54 | 3.58 | 4.13 |
+| `overconfident_wrong` | **0.29** | 0.38 | 5.05 | 3.40 | 2.98 |
+| `kidnapped` | **2.62** | 2.99 | 17.47 | 9.21 | 15.18 |
+
+🟦🟩 = landmark filters (AprilTag) · 🟪🟥🟧 = scan filters. Full 7-scenario table
+and plots in [`results/wrong_init/fav_plots/`](results/wrong_init/fav_plots/),
+write-up in [`ProbRob_Paper_Template_Englisch/paper.pdf`](ProbRob_Paper_Template_Englisch/).
+
+---
+
+## Quick start
+
+Everything runs in the `prolab_jazzy` Docker container (ROS 2 Jazzy + Gazebo
+Harmonic, NVIDIA GPU passthrough — see [`docker/`](docker/)). One launcher drives
+every pipeline:
+
+```bash
+bash scripts/prolab.sh
+```
+
+```
+   ╭───────────────────────────────────────────────────────────────╮
+   │    ██████╗ ██████╗  ██████╗        ██╗      █████╗ ██████╗      │
+   │    ██████╔╝██████╔╝██║   ██║ ████╗ ██║     ███████║██████╔╝     │
+   │    ╚═╝     ╚═╝  ╚═╝ ╚═════╝        ╚══════╝╚═╝  ╚═╝╚═════╝      │
+   │      Probabilistic Robotics · Wrong-Initialization Study        │
+   ╰───────────────────────────────────────────────────────────────╯
+     1  Live demo   2  Single run   3  Multi-seed sweep   4  Analyze   5  Paper
+```
+
+First time only, provision the container (enables the camera and installs the
+AprilTag library — these live outside the mounted workspace, so re-run after an
+image rebuild):
+
+```bash
+docker exec -u 0 prolab_jazzy bash /home/ros/ws/src/pro_lab_filters/scripts/provision_container.sh
+```
+
+### The three pipelines
+
+| | Script | What it does |
+|---|---|---|
+| 🎮 **Demo** | `scripts/run_demo.sh` | Manual RViz session: drive with the teleop panel, **kidnap** the robot with the Kidnap arrow tool, watch KF/EKF recover on their own while you rescue PF/AMCL with a **2D Pose Estimate**. |
+| 🎯 **Single run** | `scripts/run_single.sh --filter all --scenario offset_5m` | One scenario, all filters, writes CSVs for inspection. |
+| 📊 **Multi-seed sweep** | `scripts/run_wrong_init_sweep.sh` | The paper data: 7 scenarios × 10 seeds (~90 min), container-restarted between runs for a clean slate. |
+
+Then analyze and build the paper:
+
+```bash
+python3 scripts/analyze_results.py --in results/sweep --out results/wrong_init/plots
+bash scripts/copy_fav_plots.sh
+( cd ProbRob_Paper_Template_Englisch && bash build.sh paper )   # → paper.pdf
+```
+
+---
+
+## How it works
+
+**Filters** — ROS-free core classes plus thin ROS 2 nodes, implemented from
+first principles in C++:
+
+* **KF** — 6-D constant-velocity linear Kalman filter (reference baseline).
+* **EKF** — 3-D unicycle model, corrected by AprilTag range/bearing landmarks.
+* **EKF-LF** — EKF corrected by a lidar **likelihood field** (scan matching).
+* **PF** — Monte Carlo localization with a likelihood field and **augmented
+  MCL** random-particle injection for kidnap recovery; re-seedable from a
+  `/initialpose` (RViz "2D Pose Estimate").
+* **AMCL** — the Nav2 adaptive Monte Carlo baseline.
+
+**Honest landmark identity.** Each warehouse pillar carries a unique **AprilTag
+36h11** marker. The robot's OAK-D camera detects the tags (AprilTag-3 + PnP) and
+recovers their range, bearing, and **identity** — accurate to <1 cm / <0.25° vs.
+ground truth. The identity is *measured*, never taken from an oracle; ground
+truth is used **only** to score error, never as a filter input.
+
+**Why scan filters fail.** The 8 pillars sit in a symmetric 2×4 grid at 7.5 m
+spacing, so a one-bay displacement produces a near-identical scan (*perceptual
+aliasing*). Scan filters lock onto a wrong-but-symmetric hypothesis and need a
+human-supplied initial guess to escape; landmark filters sidestep this entirely
+because the tag identity names the correct pillar.
+
+---
+
+## Repository layout
 
 ```
 ws/src/pro_lab_filters/
-├── include/pro_lab_filters/
-│   ├── KF.h, EKF.h, PF.h           # standalone (ROS-free) filter classes
-│   ├── LikelihoodField.h           # 2-pass Euclidean DT for /scan likelihood
-│   ├── teleop_panel.hpp            # RViz teleop dpad (arrow keys, global)
-│   └── kidnap_tool.hpp             # RViz tool: click-to-teleport
-├── src/
-│   ├── kf_node.cpp, ekf_node.cpp, pf_node.cpp     # 3 filter nodes
-│   ├── truth_relay_node.cpp                       # ground truth from TF
-│   ├── metrics_node.cpp                           # RMSE / convergence
-│   ├── map_odom_tf_publisher.cpp                  # AMCL-style map→odom
-│   ├── robot_teleporter.cpp                       # GZ live-teleport
-│   ├── landmark_detector_node.cpp                 # self-defined landmarks
-│   └── teleop_panel.cpp, kidnap_tool.cpp          # RViz plugins
-├── launch/
-│   ├── wrong_init_experiment.launch.py    # master launch (filter:= arg)
-│   ├── kf_only.launch.py                  # single-filter wrappers
-│   ├── ekf_only.launch.py
-│   └── pf_only.launch.py
-├── config/
-│   ├── scenarios/                         # wrong-init + Q/R YAMLs
-│   ├── landmarks.yaml
-│   ├── wrong_init.rviz
-│   └── gz_bridge.yaml
-└── scripts/csv_logger.py                  # per-run CSV writer
-docker/                                    # Docker setup (Linux + NVIDIA)
-scripts/
-├── start_all.sh                           # one-shot bringup (gz + ros + rviz)
-├── run_experiments.sh                     # batch all scenarios × all filters
-└── analyze_results.py                     # RMSE plots from CSVs
+├── include/pro_lab_filters/   KF.h · EKF.h · PF.h · LikelihoodField.h   (filter cores)
+├── src/                       *_node.cpp — filters, AprilTag detector, metrics,
+│                              csv_logger, amcl_relay/init, auto_kidnapper, …  (all C++)
+├── launch/                    wrong_init_experiment.launch.py  (master)
+├── config/                    scenarios/*.yaml · aruco/ (8× tag png+sdf+dae) · *.rviz
+└── scripts/                   gen_marker_models.py · provision_container.sh
+scripts/                       prolab.sh · run_demo.sh · run_single.sh ·
+                               run_wrong_init_sweep.sh · analyze_results.py
+ProbRob_Paper_Template_Englisch/   IEEE paper (paper.tex → paper.pdf)
+results/                        sweep/ (raw CSVs) · wrong_init/ (plots)  — git-ignored
 ```
+
+Per the assignment, the filter core logic is implemented from first principles in
+C++; only the launch files and the plotting/analysis stay in Python.
+
+### Scenarios
+
+`correct_init` · `offset_1m` · `offset_5m` · `wrong_yaw_pi2` ·
+`overconfident_wrong` · `underconfident` · `kidnapped` (two unannounced teleports).
 
 ---
 
-## Assignment ↔ Code mapping
+## Documentation
 
-| Requirement                        | Where                                                                |
-| ---------------------------------- | -------------------------------------------------------------------- |
-| **Implement KF**                   | `src/kf_node.cpp` + `include/pro_lab_filters/KF.h`                   |
-| **Implement EKF**                  | `src/ekf_node.cpp` + `include/pro_lab_filters/EKF.h`                 |
-| **Implement PF**                   | `src/pf_node.cpp` + `include/pro_lab_filters/PF.h`                   |
-| Common system setup                | All filters consume same `/cmd_vel`, `/imu`, `/pose`, `/scan`, `/map`. Same TF tree (`map → odom → base_footprint`). Same scenario YAMLs. |
-| **Q variation**                    | `config/scenarios/q_low.yaml`, `q_high.yaml`                         |
-| **R variation**                    | `config/scenarios/r_low.yaml`, `r_high.yaml`                         |
-| **Runtime / performance**          | metrics_node + per-filter rates from `analyze_results.py`            |
-| **Ground-truth evaluation (RMSE)** | `truth_relay_node` + `metrics_node` → CSV → analyze script           |
-| **Landmark detection**             | `src/landmark_detector_node.cpp` + `config/landmarks.yaml`           |
-| **Wrong Init task**                | scenarios `correct_init / offset_1m / offset_5m / wrong_yaw_pi2 / overconfident_wrong / underconfident / kidnapped` |
-
-PF additionally implements (textbook AMCL):
-
-- Likelihood-field scan update (Probabilistic Robotics §6.4)
-- Augmented-MCL kidnap recovery (§8.3.5)
-- Velocity motion model with α₁..α₆ noise (§5.3 Table 5.3)
-- Beam skip for dynamic obstacles (AMCL params)
-- KLD-sampling for adaptive particle count (§4.3.4)
-
----
-
-## Running
-
-### Bring up the full stack
-
-```bash
-bash scripts/start_all.sh                              # gz + filters + rviz
-bash scripts/start_all.sh --filter kf                  # only KF
-bash scripts/start_all.sh --scenario offset_5m
-bash scripts/start_all.sh --no-rviz                    # headless
-```
-
-### Single-filter testing
-
-```bash
-ros2 launch pro_lab_filters kf_only.launch.py  scenario:=offset_5m
-ros2 launch pro_lab_filters ekf_only.launch.py scenario:=overconfident_wrong
-ros2 launch pro_lab_filters pf_only.launch.py  scenario:=kidnapped
-```
-
-### Run all experiments → CSVs
-
-```bash
-bash scripts/run_experiments.sh --duration 60       # ~9 scenarios × 3 filters
-bash scripts/run_experiments.sh --scenario q_low    # one scenario, all filters
-bash scripts/run_experiments.sh --filter pf         # one filter, all scenarios
-docker cp prolab_jazzy:/tmp/pro_lab_results ./results
-```
-
-### Analyse → plots
-
-```bash
-python3 scripts/analyze_results.py --in ./results --out ./results
-# → ./results/<scenario>_error.png      per-scenario RMSE timelines
-# → ./results/rmse_comparison.png       cross-scenario bar chart
-# → ./results/all_summaries.csv         table for the paper
-```
-
-### Live UI
-
-- **RViz**: full layout incl. teleop panel (arrow keys, global), kidnap tool,
-  landmark markers, particle cloud, all 3 filter pose arrows.
-
----
-
-## Scenarios
-
-| scenario              | what it tests                                       |
-| --------------------- | --------------------------------------------------- |
-| `correct_init`        | baseline — init at truth, tight spread              |
-| `offset_1m`           | mild wrong init, spread covers truth                |
-| `offset_5m`           | severe wrong init, spread does **not** cover truth  |
-| `wrong_yaw_pi2`       | yaw rotated 90° — non-linear failure mode           |
-| `overconfident_wrong` | wrong + tiny spread — particle deprivation for PF   |
-| `underconfident`      | right pose, huge covariance — slow KF/EKF           |
-| `kidnapped`           | uniform global init, PF only feasible               |
-| `q_low / q_high`      | process noise variation                             |
-| `r_low / r_high`      | measurement noise variation                         |
-
----
-
-## Setup notes
-
-- ROS 2 Jazzy + Gazebo Harmonic, all in one Docker container on Ubuntu.
-  NVIDIA GPU passthrough via `nvidia-container-toolkit`. See
-  `docker/docker-compose.yml` and `docker/Dockerfile`.
-- Map origin in `nav2_bringup/maps/warehouse.yaml` is set up for spawn
-  `(-8.0, -0.50, 0)` — that's our default. All wrong-init scenarios express
-  their `init_x/y/yaw` as deltas from this baseline.
+* 📄 **Paper** — [`ProbRob_Paper_Template_Englisch/paper.pdf`](ProbRob_Paper_Template_Englisch/)
+* 📈 **Plots** — [`results/wrong_init/fav_plots/`](results/wrong_init/fav_plots/)
+* 📝 **Run protocol & notes** — [`docs/`](docs/)

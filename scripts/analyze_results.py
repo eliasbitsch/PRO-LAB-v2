@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Aggregate the per-experiment CSVs from csv_logger.py into matplotlib
+"""Aggregate the per-experiment CSVs from csv_logger_node into matplotlib
 plots covering every metric the wrong-init study cares about.
 
 Inputs (one of):
@@ -151,11 +151,15 @@ def _plot_path_gradient(ax, xs, ys, base_color, label, zorder, ts=None,
     ax.add_collection(lc)
     # One invisible handle for the legend.
     ax.plot([], [], color=base_color, lw=lw, ls=ls, label=label, zorder=zorder)
+# MARKER positions = pillar coords shifted MARKER_OFFSET=0.6 m toward the aisle
+# (left column +x, right column -x), matching launch's marker_coords. The
+# landmark-based filters correct against the TAG, not the I-beam centre, so the
+# plotted stars must sit where the AprilTag plates actually are.
 LANDMARKS = [
-    (-7.45, -15.02), ( 7.49, -15.02),
-    (-7.42,  -7.55), ( 7.46,  -7.52),
-    (-7.51,  -0.02), ( 7.43,  -0.02),
-    (-7.45,   7.54), ( 7.43,   7.48),
+    (-6.85, -15.02), ( 6.89, -15.02),
+    (-6.82,  -7.55), ( 6.86,  -7.52),
+    (-6.91,  -0.02), ( 6.83,  -0.02),
+    (-6.85,   7.54), ( 6.83,   7.48),
 ]
 
 
@@ -184,20 +188,22 @@ def configure_backend(fmt: str):
             "figure.facecolor": "white",
             "axes.facecolor":   "white",
             "font.family":      "sans-serif",
-            "font.size":        11,
-            "axes.titlesize":   13,
+            # Fonts bumped: these PNGs get scaled DOWN to LaTeX column width, so
+            # generous sizes keep labels/ticks/legends legible in the paper.
+            "font.size":        15,
+            "axes.titlesize":   17,
             "axes.titleweight": "bold",
-            "axes.labelsize":   11,
+            "axes.labelsize":   15,
             "axes.edgecolor":   "0.4",
-            "axes.linewidth":   0.9,
+            "axes.linewidth":   1.0,
             "axes.axisbelow":   True,      # grid behind data
             "axes.grid":        True,
             "grid.color":       "0.85",
             "grid.linewidth":   0.8,
-            "xtick.labelsize":  10,
-            "ytick.labelsize":  10,
-            "lines.linewidth":  1.8,
-            "legend.fontsize":  9,
+            "xtick.labelsize":  13,
+            "ytick.labelsize":  13,
+            "lines.linewidth":  2.2,
+            "legend.fontsize":  13,
             "legend.frameon":   True,
             "legend.framealpha": 0.92,
             "legend.edgecolor": "0.8",
@@ -280,17 +286,17 @@ def plot_band(ax, t, stack, color, label):
 
 def plot_filter_explainer(scenario: str, paths: list[Path], filter_name: str,
                           out: Path, fmt: str, plt):
-    """Lecture-style 3-panel figure (cf. Thrun §3.3) for a single filter on
-    a single scenario:
+    """Lecture-style 3-panel figure (cf. Thrun §3.3) for a single filter:
 
-      Panel 1: truth path + filter estimate (paths only) — "motion model"
-      Panel 2: same + 2σ uncertainty ellipses from EARLY ticks where no
-               landmark has been fused yet (n_landmarks_detected==0) —
-               "without correction, uncertainty grows"
-      Panel 3: same + 2σ ellipses from later ticks WITH landmark
-               observations + landmark stars — "measurement updates
-               shrink the uncertainty"
+      Panel 1: truth + DEAD-RECKONING estimate (ekf_dr: pure wheel-odometry
+               integration, no IMU, no landmarks) — "odometry drifts"
+      Panel 2: same + the dead-reckoner's 2σ ellipses along the whole path —
+               "without correction, uncertainty grows unbounded"
+      Panel 3: truth + the ACTUAL filter estimate + its 2σ ellipses +
+               landmark stars — "measurement updates bound the error"
 
+    The dead-reckoning baseline is real data from the ekf_dr twin that runs
+    alongside every experiment (predict-only EKF), not a synthetic mock-up.
     Produces <scenario>_<filter>_explainer.<fmt>.
     """
     ts = read_timeseries(paths[0])
@@ -298,6 +304,8 @@ def plot_filter_explainer(scenario: str, paths: list[Path], filter_name: str,
         return
     f = filter_name
     col = COLOURS.get(f, "tab:orange")
+    dr = "ekf_dr"
+    have_dr = f"{dr}_x" in ts
 
     tx = np.asarray(ts["truth_x"], dtype=float)
     ty = np.asarray(ts["truth_y"], dtype=float)
@@ -305,92 +313,97 @@ def plot_filter_explainer(scenario: str, paths: list[Path], filter_name: str,
     fy = np.asarray(ts[f"{f}_y"], dtype=float)
     n_lm = np.asarray(ts.get("n_landmarks_detected", [0]*len(tx)), dtype=float)
 
-    # Pxx / Pyy / Pxy for proper ellipses (fall back to old cov column)
-    cxx_k, cyy_k, cxy_k = f"{f}_cov_xx", f"{f}_cov_yy", f"{f}_cov_xy"
-    if cxx_k not in ts:
-        c_old = np.asarray(ts.get(f"{f}_cov", [0]*len(tx)), dtype=float)
-        pxx = c_old; pyy = c_old; pxy = np.zeros_like(c_old)
+    def cov_of(name):
+        cxx_k, cyy_k, cxy_k = f"{name}_cov_xx", f"{name}_cov_yy", f"{name}_cov_xy"
+        if cxx_k not in ts:
+            c_old = np.asarray(ts.get(f"{name}_cov", [0]*len(tx)), dtype=float)
+            return c_old, c_old, np.zeros_like(c_old)
+        return (np.asarray(ts[cxx_k], dtype=float),
+                np.asarray(ts[cyy_k], dtype=float),
+                np.asarray(ts[cxy_k], dtype=float))
+
+    pxx, pyy, pxy = cov_of(f)
+    if have_dr:
+        dx = np.asarray(ts[f"{dr}_x"], dtype=float)
+        dy = np.asarray(ts[f"{dr}_y"], dtype=float)
+        dxx, dyy, dxy = cov_of(dr)
     else:
-        pxx = np.asarray(ts[cxx_k], dtype=float)
-        pyy = np.asarray(ts[cyy_k], dtype=float)
-        pxy = np.asarray(ts[cxy_k], dtype=float)
+        # Fallback (old CSVs without the twin): use the filter itself.
+        dx, dy = fx, fy
+        dxx, dyy, dxy = pxx, pyy, pxy
 
     fig, axs = plt.subplots(1, 3, figsize=(15, 5.2), sharey=True)
     titles = [
-        f"{f.upper()}: trajectory (motion model)",
-        f"{f.upper()}: predict-only uncertainty\n(ticks without landmark)",
-        f"{f.upper()}: with landmark correction\n(ticks with ≥1 landmark)",
+        "Odometry drift\n(dead reckoning, no correction)",
+        "Odometry drift with growing uncertainty",
+        f"{f.upper()}: with landmark-based correction",
     ]
 
-    def draw_paths(ax):
+    def draw_truth(ax):
         ax.plot(tx, ty, color="k", lw=2, label="Ground Truth", zorder=8)
-        ax.plot(fx, fy, color=col, ls="--", lw=1.6,
-                label=f"{f.upper()} estimate", zorder=7)
         ax.scatter([tx[0]], [ty[0]], c="green", s=60, zorder=10, label="Start")
         ax.scatter([tx[-1]], [ty[-1]], c="orange", s=60, zorder=10, label="True End")
-        ax.scatter([fx[-1]], [fy[-1]], c="red", s=60, zorder=10, label="Estimated End")
 
-    def draw_ellipses(ax, mask, max_count=25):
-        idxs = np.where(mask & np.isfinite(pxx) & np.isfinite(pyy) & np.isfinite(pxy)
-                        & (pxx > 0) & (pyy > 0))[0]
+    def draw_est(ax, ex, ey, color, label):
+        ax.plot(ex, ey, color=color, ls="--", lw=1.6, label=label, zorder=7)
+        ax.scatter([ex[-1]], [ey[-1]], c="red", s=60, zorder=10,
+                   label="Estimated End")
+
+    def draw_ellipses(ax, ex, ey, exx, eyy, exy, mask, color, max_count=25):
+        idxs = np.where(mask & np.isfinite(exx) & np.isfinite(eyy)
+                        & np.isfinite(exy) & (exx > 0) & (eyy > 0))[0]
         if idxs.size == 0:
-            return 0
+            return
         step = max(1, idxs.size // max_count)
-        drawn = 0
         for i in idxs[::step]:
-            C = np.array([[pxx[i], pxy[i]], [pxy[i], pyy[i]]])
+            C = np.array([[exx[i], exy[i]], [exy[i], eyy[i]]])
             vals, vecs = np.linalg.eigh(C)
             vals = np.clip(vals, 1e-9, None)
             order = vals.argsort()[::-1]
             vals, vecs = vals[order], vecs[:, order]
-            width  = min(2 * 2 * np.sqrt(vals[0]), 5.0)
-            height = min(2 * 2 * np.sqrt(vals[1]), 5.0)
+            width  = min(2 * 2 * np.sqrt(vals[0]), 6.0)
+            height = min(2 * 2 * np.sqrt(vals[1]), 6.0)
             angle = np.degrees(np.arctan2(vecs[1, 0], vecs[0, 0]))
-            ax.add_patch(Ellipse((fx[i], fy[i]),
+            ax.add_patch(Ellipse((ex[i], ey[i]),
                                  width=width, height=height, angle=angle,
-                                 fill=False, color=col, alpha=0.45, lw=0.9))
-            drawn += 1
-        return drawn
+                                 fill=False, color=color, alpha=0.5, lw=0.9))
 
-    # Panel 1: paths only
-    draw_paths(axs[0])
+    dr_col = "tab:orange"
+    all_mask = np.ones_like(tx, dtype=bool)
 
-    # Panel 2: ellipses on ticks WITHOUT a landmark observation in the recent
-    # past. We mark each tick i as "predict-only" if no landmark has been
-    # seen in the last `gap` ticks (≈ 0.5 s @ 20 Hz). That captures the
-    # "uncertainty grows" phase between sightings.
-    gap = 10
-    rolling = np.zeros_like(n_lm, dtype=bool)
-    seen = 0
-    for i, v in enumerate(n_lm):
-        if v > 0:
-            seen = 0
-            rolling[i] = False
-        else:
-            seen += 1
-            rolling[i] = seen >= gap
-    draw_paths(axs[1])
-    draw_ellipses(axs[1], rolling)
+    # Panel 1: truth vs dead-reckoning path — drift visible, no ellipses.
+    draw_truth(axs[0])
+    draw_est(axs[0], dx, dy, dr_col, "Odometry (dead reckoning)")
 
-    # Panel 3: ellipses ONLY where a landmark was just observed (corrections)
-    landmark_mask = n_lm > 0
-    draw_paths(axs[2])
-    draw_ellipses(axs[2], landmark_mask)
+    # Panel 2: same + the dead-reckoner's covariance along the WHOLE path —
+    # it grows without bound because nothing ever corrects it.
+    draw_truth(axs[1])
+    draw_est(axs[1], dx, dy, dr_col, "Odometry (dead reckoning)")
+    draw_ellipses(axs[1], dx, dy, dxx, dyy, dxy, all_mask, "k")
+
+    # Panel 3: the actual filter with landmark corrections + stars.
+    draw_truth(axs[2])
+    draw_est(axs[2], fx, fy, col, f"{f.upper()} estimate")
+    draw_ellipses(axs[2], fx, fy, pxx, pyy, pxy, all_mask, col)
     lx = [p[0] for p in LANDMARKS]; ly = [p[1] for p in LANDMARKS]
     axs[2].scatter(lx, ly, marker="*", s=180, color="tab:blue",
                    edgecolor="k", zorder=9, label="Known Landmark")
 
     for ax, title in zip(axs, titles):
         ax.set_xlabel("x [m]")
-        ax.set_title(title, fontsize=10)
+        ax.set_title(title, fontsize=15)
         ax.set_xlim(-2.0, 10.0)
         ax.set_ylim(-2.0, 8.0)
         ax.set_aspect("equal", adjustable="box")
         ax.grid(alpha=0.3)
     axs[0].set_ylabel("y [m]")
-    axs[2].legend(loc="lower right", fontsize=7)
-    fig.suptitle(f"{scenario} — {f.upper()} localization: motion model → "
-                 "uncertainty growth → landmark correction", fontsize=11)
+    # Panel 1 carries the truth/odometry legend; panel 3 the filter legend.
+    # upper left keeps both clear of the landmark star at (7.5, 0) in the
+    # lower-right corner of the zoom window.
+    axs[0].legend(loc="upper left", fontsize=11)
+    axs[2].legend(loc="upper left", fontsize=11)
+    fig.suptitle(f"{scenario} — {f.upper()} localization: odometry drift → "
+                 "growing uncertainty → landmark-based correction", fontsize=11)
     fig.tight_layout()
     fig.savefig(out / f"{scenario}_{f}_explainer.{fmt}")
     plt.close(fig)
@@ -419,6 +432,36 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
     ax.legend(); ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(out / f"{scenario}_error_yaw.{fmt}"); plt.close(fig)
+
+    # Estimated position uncertainty over time: σ_xy = sqrt(Pxx + Pyy).
+    # Shows the filter's OWN belief about its accuracy: grows during
+    # landmark-free stretches, shrinks on corrections. The ekf_dr twin
+    # (dead reckoning) grows monotonically — the textbook contrast.
+    fig, ax = plt.subplots(figsize=(8, 4))
+    drew_unc = False
+    for f in list(filters) + ["ekf_dr"]:
+        ts0 = read_timeseries(paths[0])
+        cxx, cyy = f"{f}_cov_xx", f"{f}_cov_yy"
+        if cxx not in ts0 or "time" not in ts0:
+            continue
+        t = np.asarray(ts0["time"], dtype=float)
+        sig = np.sqrt(np.clip(
+            np.asarray(ts0[cxx], dtype=float) +
+            np.asarray(ts0[cyy], dtype=float), 0, None))
+        style = "--" if f == "ekf_dr" else "-"
+        label = "EKF_DR (dead reckoning)" if f == "ekf_dr" else f.upper()
+        ax.plot(t, sig, style, color=COLOURS.get(f, "gray"), lw=1.4,
+                label=label, alpha=0.9)
+        drew_unc = True
+    if drew_unc:
+        ax.set_yscale("log")
+        ax.set_xlabel("time [s]")
+        ax.set_ylabel(r"estimated position uncertainty  $\sigma_{xy}$ [m]")
+        ax.set_title(f"{scenario} — filter-estimated uncertainty over time")
+        ax.legend(fontsize=8); ax.grid(alpha=0.3, which="both")
+        fig.tight_layout()
+        fig.savefig(out / f"{scenario}_uncertainty.{fmt}")
+    plt.close(fig)
 
     # NEES vs χ² band (3-DoF: lower 0.025 = 0.216, upper 0.975 = 9.348)
     fig, ax = plt.subplots(figsize=(8, 4))
@@ -547,20 +590,45 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
             kidnap_idx = _jump_indices(ts["truth_x"], ts["truth_y"])
             has_kidnaps = kidnap_idx.size > 0
             if has_kidnaps:
-                _plot_path_gradient(ax, tx, ty, "k", "Ground Truth",
-                                    zorder=8, lw=2.0, ls="-")
+                # Truth: SOLID black (a faded gradient made the long first
+                # leg look washed-out/"chopped"). Temporal order is conveyed
+                # by numbering each truth leg (1), (2), ... at its start
+                # instead. The filter estimate keeps the faint->solid
+                # gradient so its convergence/divergence over time stays
+                # readable.
+                ax.plot(tx, ty, color="k", lw=2.2, label="Ground Truth",
+                        zorder=8, solid_capstyle="round")
                 _plot_path_gradient(ax, fx, fy, col, f"{f.upper()} estimate",
                                     zorder=7, lw=1.6, ls="--")
                 tx_full = np.asarray(ts["truth_x"], dtype=float)
                 ty_full = np.asarray(ts["truth_y"], dtype=float)
+                # Number the truth legs: leg k starts at index 0 / each
+                # kidnap arrival index.
+                leg_starts = [0] + list(kidnap_idx)
+                for leg_no, si in enumerate(leg_starts, start=1):
+                    ax.annotate(f"({leg_no})",
+                                (tx_full[si], ty_full[si]),
+                                xytext=(-14, -4), textcoords="offset points",
+                                color="k", fontsize=10, fontweight="bold",
+                                zorder=12)
                 for k_no, i in enumerate(kidnap_idx, start=1):
-                    # red X = last point before + first point after the jump
-                    ax.scatter([tx_full[i - 1], tx_full[i]],
-                               [ty_full[i - 1], ty_full[i]],
-                               marker="x", s=80, c="red", linewidth=2,
-                               zorder=11,
-                               label=("kidnap event" if k_no == 1 else None))
-                    ax.annotate(f"K{k_no}", (tx_full[i], ty_full[i]),
+                    # Departure (hollow circle) --> arrival (red X), joined by
+                    # a dotted arrow so the teleport direction is explicit.
+                    # Departure of K2 can sit almost on top of K1's arrival
+                    # (the script drives out and reverses back between
+                    # kidnaps), so distinct markers matter.
+                    x0, y0 = tx_full[i - 1], ty_full[i - 1]
+                    x1, y1 = tx_full[i], ty_full[i]
+                    ax.annotate("", xy=(x1, y1), xytext=(x0, y0), zorder=10,
+                                arrowprops=dict(arrowstyle="->", color="red",
+                                                ls=":", lw=1.4, alpha=0.8))
+                    ax.scatter([x0], [y0], marker="o", s=70, facecolors="none",
+                               edgecolors="red", linewidth=1.8, zorder=11,
+                               label=("kidnap: from" if k_no == 1 else None))
+                    ax.scatter([x1], [y1], marker="x", s=80, c="red",
+                               linewidth=2, zorder=11,
+                               label=("kidnap: to" if k_no == 1 else None))
+                    ax.annotate(f"K{k_no}", (x1, y1),
                                 xytext=(6, 6), textcoords="offset points",
                                 color="red", fontsize=9, fontweight="bold",
                                 zorder=12)
@@ -656,6 +724,45 @@ def load_all_summaries(in_dir: Path) -> tuple[list[dict], list[str]]:
             for r in reader:
                 rows.append(r)
     return rows, fields
+
+
+def convergence_from_timeseries(in_dir, scenarios, filters,
+                                threshold=0.20, tail_frac=0.15):
+    """Per (scenario, filter): fraction of seeds whose MEAN err_xy over the
+    final tail_frac of the run is < threshold. Uses the END error (not the
+    cumulative RMSE in the summary), so a filter that gets kidnapped and then
+    recovers correctly counts as converged. Replaces the metrics_node
+    `converged` flag, which never fires reliably."""
+    counts = {f: defaultdict(lambda: [0, 0]) for f in filters}  # scen -> [conv,total]
+    for p in sorted(in_dir.glob("*_timeseries.csv")):
+        m = SEED_RE.match(p.name)
+        if not m:
+            continue
+        sc = m.group("scenario")
+        series = {f: [] for f in filters}
+        with p.open() as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                for f in filters:
+                    k = f"{f}_err_xy"
+                    if k in row:
+                        try:
+                            series[f].append(float(row[k]))
+                        except (ValueError, TypeError):
+                            pass
+        for f in filters:
+            vals = [v for v in series[f] if v == v]   # drop NaN
+            if not vals:
+                continue
+            n_tail = max(5, int(len(vals) * tail_frac))
+            counts[f][sc][1] += 1
+            if float(np.mean(vals[-n_tail:])) < threshold:
+                counts[f][sc][0] += 1
+    rate = {}
+    for f in filters:
+        rate[f] = [(100.0 * counts[f][s][0] / counts[f][s][1]
+                    if counts[f][s][1] else float("nan")) for s in scenarios]
+    return rate
 
 
 def grouped_bar(scenarios, values_per_filter, errors_per_filter, filters,
@@ -759,27 +866,14 @@ def aggregate_plots(in_dir: Path, out_dir: Path, fmt: str, filters, plt):
                 out_dir / f"runtime_comparison.{fmt}", plt, log=True,
                 label_suffix=big_o)
 
-    # Convergence rate: fraction of seeds with converged=True per (scenario, filter)
-    rate: dict[str, list[float]] = defaultdict(list)
-    for s in scenarios:
-        for f in filters:
-            col = f"{f}_converged"
-            if col not in fields:
-                rate[f].append(float("nan"))
-                continue
-            n_total = 0; n_conv = 0
-            for r in by_scenario[s]:
-                v = r.get(col, "")
-                if v == "":
-                    continue
-                n_total += 1
-                if v.lower() in ("true", "1"):
-                    n_conv += 1
-            rate[f].append(100.0 * n_conv / n_total if n_total else float("nan"))
+    # Convergence rate: fraction of seeds whose final-error_xy < 0.20 m,
+    # computed from the timeseries (recovery-aware) — NOT the metrics_node
+    # `converged` flag, which never fires reliably.
+    rate = convergence_from_timeseries(in_dir, scenarios, filters, threshold=0.20)
     grouped_bar(scenarios, rate, defaultdict(lambda: [0.0] * len(scenarios)),
                 filters,
                 "converged seeds [%]",
-                "Convergence rate (% of seeds reaching error_xy < 0.20 m)",
+                "Convergence rate (% of seeds with final error_xy < 0.20 m)",
                 out_dir / f"convergence_rate.{fmt}", plt)
 
 

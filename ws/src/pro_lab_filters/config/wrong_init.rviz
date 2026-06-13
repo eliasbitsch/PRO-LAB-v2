@@ -552,19 +552,31 @@ Visualization Manager:
       Use rainbow: true
       Value: true
     - Class: rviz_default_plugins/Image
-      Enabled: false
+      Enabled: true
       Max Value: 1
       Median window: 5
       Min Value: 0
-      Name: Image
+      Name: OAK-D RGB
       Normalize Range: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /rgbd_camera/image
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Detected AprilTags
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: ""
-      Value: false
+        Value: /landmark/detected_tags
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 30; 32; 40

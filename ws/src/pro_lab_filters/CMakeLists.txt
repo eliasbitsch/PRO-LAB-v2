@@ -29,6 +29,12 @@ find_package(gz_transport_vendor REQUIRED)
 find_package(gz-transport REQUIRED)
 find_package(gz_msgs_vendor REQUIRED)
 find_package(gz-msgs REQUIRED)
+# AprilTag landmark detector: OpenCV (image -> mono8), cv_bridge, libapriltag.
+find_package(OpenCV REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_library(APRILTAG_LIBRARY NAMES apriltag REQUIRED)
+find_path(APRILTAG_INCLUDE_DIR NAMES apriltag.h
+    PATHS /usr/include/apriltag /usr/local/include/apriltag)
 set(CMAKE_AUTOMOC ON)
 
 set(COMMON_DEPS
@@ -75,23 +81,43 @@ add_executable(map_odom_tf_publisher src/map_odom_tf_publisher.cpp)
 ament_target_dependencies(map_odom_tf_publisher
     rclcpp geometry_msgs tf2 tf2_ros)
 
-add_executable(landmark_detector_node src/landmark_detector_node.cpp)
-ament_target_dependencies(landmark_detector_node
-    rclcpp std_msgs geometry_msgs visualization_msgs tf2 tf2_ros)
+# Real camera-based AprilTag landmark detector (libapriltag + cv_bridge).
+add_executable(apriltag_landmark_detector_node src/apriltag_landmark_detector_node.cpp)
+ament_target_dependencies(apriltag_landmark_detector_node
+    rclcpp std_msgs sensor_msgs geometry_msgs visualization_msgs tf2 tf2_ros cv_bridge)
+target_include_directories(apriltag_landmark_detector_node PRIVATE
+    ${APRILTAG_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(apriltag_landmark_detector_node
+    ${APRILTAG_LIBRARY} ${OpenCV_LIBS})
 
 add_executable(trajectory_player_node src/trajectory_player_node.cpp)
 ament_target_dependencies(trajectory_player_node
-    rclcpp std_msgs geometry_msgs nav_msgs)
+    rclcpp std_msgs geometry_msgs nav_msgs sensor_msgs)
 
 add_executable(gz_truth_relay src/gz_truth_relay.cpp)
 ament_target_dependencies(gz_truth_relay rclcpp geometry_msgs nav_msgs)
 target_link_libraries(gz_truth_relay gz-transport13::core gz-msgs10::core)
 
+# ── Experiment IO nodes (ported from Python; task wants C++) ─────────────
+add_executable(amcl_relay_node src/amcl_relay_node.cpp)
+ament_target_dependencies(amcl_relay_node rclcpp geometry_msgs)
+
+add_executable(amcl_init_pose_node src/amcl_init_pose_node.cpp)
+ament_target_dependencies(amcl_init_pose_node rclcpp geometry_msgs)
+
+add_executable(auto_kidnapper_node src/auto_kidnapper_node.cpp)
+ament_target_dependencies(auto_kidnapper_node rclcpp geometry_msgs)
+
+add_executable(csv_logger_node src/csv_logger_node.cpp)
+ament_target_dependencies(csv_logger_node rclcpp std_msgs geometry_msgs)
+
 install(TARGETS
     kf_node ekf_node ekf_lf_node pf_node
     truth_relay_node metrics_node gz_truth_relay
     cmd_vel_watchdog robot_teleporter map_odom_tf_publisher
-    landmark_detector_node trajectory_player_node
+    trajectory_player_node
+    apriltag_landmark_detector_node
+    amcl_relay_node amcl_init_pose_node auto_kidnapper_node csv_logger_node
   DESTINATION lib/${PROJECT_NAME})
 
 # ── RViz2 panel plugin (teleop dpad) ────────────────────────────────────
@@ -113,12 +139,10 @@ install(FILES rviz_plugins.xml DESTINATION share/${PROJECT_NAME})
 pluginlib_export_plugin_description_file(rviz_common rviz_plugins.xml)
 
 # Python scripts (CSV logger + AMCL relay)
-install(PROGRAMS
-    scripts/csv_logger.py
-    scripts/amcl_relay.py
-    scripts/amcl_init_pose.py
-    scripts/auto_kidnapper.py
-  DESTINATION lib/${PROJECT_NAME})
+# All runtime nodes are now C++ (task: everything except launch files and
+# plotting scripts in C++). The remaining scripts/ entries are dev/CI helpers
+# run by path (gen_*markers, provision_container.sh) or the retired Python
+# originals — none are installed as ROS executables.
 
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME})

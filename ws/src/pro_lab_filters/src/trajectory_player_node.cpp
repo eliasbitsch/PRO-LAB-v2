@@ -26,6 +26,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <nav_msgs/msg/path.hpp>
+#include <sensor_msgs/msg/imu.hpp>
 #include <std_msgs/msg/bool.hpp>
 
 using namespace std::chrono_literals;
@@ -36,6 +37,18 @@ struct Segment {
   double w;
   const char* label;
 };
+
+// In-place pivots (v == 0, w != 0) are executed CLOSED-LOOP on the IMU yaw
+// rather than open-loop on time. Reason: the gz DiffDrive plugin ramps the
+// angular rate (max_angular_acceleration = 3 rad/s²) and the wheels slip a
+// few percent during pure rotation, so "3 s × π/6 rad/s" lands at ~85°, not
+// 90° — and the north leg then visibly leans in every trajectory plot. The
+// IMU is a real onboard sensor (the filters consume it too), so feedback on
+// it stays faithful to the no-ground-truth rule. Timed segments are
+// unaffected; a pivot ends when |yaw - yaw_at_pivot_start| reaches
+// |w| · duration_s (the intended angle), with a duration × 1.8 timeout as a
+// safety net.
+static bool is_pivot(const Segment& s) { return s.v == 0.0 && s.w != 0.0; }
 
 // S-curve followed by a sharp curve. The two opposite smooth arcs (the "S")
 // test how each filter tracks gentle continuous turning; the final tight,
@@ -94,6 +107,16 @@ public:
     const auto topic_done = get_parameter("topic_done").as_string();
 
     cmd_pub_  = create_publisher<geometry_msgs::msg::Twist>(topic_in, 10);
+    // IMU yaw for closed-loop pivots (see is_pivot above).
+    imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
+        "/imu", 20,
+        [this](sensor_msgs::msg::Imu::SharedPtr m) {
+          const auto& q = m->orientation;
+          const double siny = 2.0 * (q.w * q.z + q.x * q.y);
+          const double cosy = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+          imu_yaw_ = std::atan2(siny, cosy);
+          have_imu_ = true;
+        });
     // Latched-style done topic (transient_local QoS) so late subscribers see
     // the final state. Useful when an outer script polls after launch.
     rclcpp::QoS done_qos(1);
@@ -131,6 +154,11 @@ private:
     return t;
   }
 
+  // Wrap angle difference to (-π, π].
+  static double angDiff(double a, double b) {
+    return std::atan2(std::sin(a - b), std::cos(a - b));
+  }
+
   void tick() {
     // Capture the start on the first tick with a valid (non-zero) sim clock.
     if (!started_) {
@@ -144,31 +172,70 @@ private:
       publishStop();
       return;
     }
-    const double t = now - start_delay_;
 
     if (done_) {
       publishStop();
       return;
     }
 
-    // Find current segment.
-    double accum = 0.0;
-    for (const auto& s : kPath) {
-      if (t < accum + s.duration_s) {
-        publish(s.v * scale_, s.w * scale_);
-        if (s.label != current_label_) {
-          current_label_ = s.label;
-          RCLCPP_INFO(get_logger(), "[%6.1fs] segment: %s (v=%.2f, w=%.2f)",
-                      t, s.label, s.v * scale_, s.w * scale_);
-        }
-        return;
-      }
-      accum += s.duration_s;
+    // Stateful segment machine: seg_idx_ advances when the current segment
+    // finishes. Timed segments finish after duration_s; pivot segments
+    // (v==0, w!=0) finish when the IMU yaw delta reaches the intended angle
+    // |w|·duration_s — robust against DiffDrive accel ramps + wheel slip
+    // that make open-loop pivots undershoot by ~5°.
+    if (seg_idx_ >= kPath.size()) {
+      finishOrLoop(now);
+      return;
+    }
+    const auto& s = kPath[seg_idx_];
+
+    // First tick inside this segment: capture its start time + start yaw.
+    if (!seg_entered_) {
+      seg_entered_   = true;
+      seg_start_t_   = now;
+      seg_start_yaw_ = imu_yaw_;
+      seg_yaw_acc_   = 0.0;
+      seg_last_yaw_  = imu_yaw_;
+      RCLCPP_INFO(get_logger(), "[%6.1fs] segment: %s (v=%.2f, w=%.2f)%s",
+                  now - start_delay_, s.label, s.v * scale_, s.w * scale_,
+                  is_pivot(s) && have_imu_ ? " [IMU-closed-loop]" : "");
+    }
+    const double seg_t = now - seg_start_t_;
+
+    bool seg_done;
+    if (is_pivot(s) && have_imu_) {
+      // Accumulate yaw progress incrementally (handles ±π wrap mid-pivot).
+      seg_yaw_acc_ += std::abs(angDiff(imu_yaw_, seg_last_yaw_));
+      seg_last_yaw_ = imu_yaw_;
+      const double target = std::abs(s.w) * s.duration_s * scale_;
+      // Stop slightly early: the DiffDrive decelerates ω at 3 rad/s², which
+      // adds ω²/(2·3) rad of overshoot after we command w=0.
+      const double brake = (s.w * scale_) * (s.w * scale_) / (2.0 * 3.0);
+      seg_done = (seg_yaw_acc_ >= target - brake)
+                 || (seg_t > s.duration_s * 1.8);   // safety timeout
+    } else {
+      seg_done = seg_t >= s.duration_s;
     }
 
-    // Past end: stop, signal done (or loop).
+    if (seg_done) {
+      if (is_pivot(s) && have_imu_) {
+        RCLCPP_INFO(get_logger(), "pivot '%s' done: |Δyaw|=%.1f° in %.2fs",
+                    s.label, seg_yaw_acc_ * 180.0 / M_PI, seg_t);
+      }
+      seg_idx_ += 1;
+      seg_entered_ = false;
+      publishStop();   // one stop tick between segments settles the ramp
+      return;
+    }
+
+    publish(s.v * scale_, s.w * scale_);
+  }
+
+  void finishOrLoop(double now) {
     if (loop_) {
       t_start_ = this->now() - rclcpp::Duration::from_seconds(start_delay_);
+      seg_idx_ = 0;
+      seg_entered_ = false;
       RCLCPP_INFO(get_logger(), "looping back to segment 0");
       return;
     }
@@ -177,7 +244,7 @@ private:
       done_ = true;
       std_msgs::msg::Bool m; m.data = true;
       done_pub_->publish(m);
-      RCLCPP_INFO(get_logger(), "trajectory complete (%.1fs)", t);
+      RCLCPP_INFO(get_logger(), "trajectory complete (%.1fs)", now - start_delay_);
     }
   }
 
@@ -225,6 +292,7 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr       done_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr       planned_pub_;
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr  imu_sub_;
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Time t_start_;
   double start_delay_ = 12.0;
@@ -232,7 +300,18 @@ private:
   bool   loop_        = false;
   bool   done_        = false;
   bool   started_     = false;
-  const char* current_label_ = "";
+
+  // segment state machine
+  std::size_t seg_idx_     = 0;
+  bool   seg_entered_      = false;
+  double seg_start_t_      = 0.0;
+  double seg_start_yaw_    = 0.0;
+  double seg_yaw_acc_      = 0.0;   // |Δyaw| integrated over the pivot
+  double seg_last_yaw_     = 0.0;
+
+  // IMU feedback
+  double imu_yaw_  = 0.0;
+  bool   have_imu_ = false;
 };
 
 int main(int argc, char** argv) {

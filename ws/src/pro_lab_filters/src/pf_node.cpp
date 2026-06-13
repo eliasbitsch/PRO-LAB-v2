@@ -78,6 +78,13 @@ public:
     // for global/kidnap recovery; during normal driving it scatters particles
     // across the map and the estimate diverges. Enable in kidnapped.yaml.
     declare_parameter("use_augmented_mcl", false);
+    // w_slow / w_fast decay rates (Thrun §8.3.3). Thrun's canonical values
+    // (0.001 / 0.1) assume a ~10 Hz laser over thousands of updates; our PF
+    // only sees ~1.3 scan updates per second (~40 per run), so the averages
+    // must adapt ~50x faster or w_slow stays frozen at its (terrible)
+    // uniform-init value and the injection probability never goes positive.
+    declare_parameter("aug_alpha_slow", 0.05);
+    declare_parameter("aug_alpha_fast", 0.50);
     // Beam skip
     declare_parameter("do_beamskip",                false);
     declare_parameter("beam_skip_distance",         0.5);
@@ -128,6 +135,8 @@ public:
         get_parameter("alpha3").as_double(), get_parameter("alpha4").as_double(),
         get_parameter("alpha5").as_double(), get_parameter("alpha6").as_double());
     pf_.enableAugmentedMcl(get_parameter("use_augmented_mcl").as_bool());
+    pf_.setAugmentedMcl(get_parameter("aug_alpha_slow").as_double(),
+                        get_parameter("aug_alpha_fast").as_double());
     if (get_parameter("do_beamskip").as_bool()) {
       pf_.setBeamSkip(true,
         get_parameter("beam_skip_distance").as_double(),

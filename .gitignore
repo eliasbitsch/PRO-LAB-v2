@@ -16,3 +16,13 @@ docker/.env
 
 # large reference assets
 NEURA_MAV.glb
+
+# LaTeX build artifacts (keep .tex / .pdf / .bib / images)
+*.aux
+*.out
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.toc
