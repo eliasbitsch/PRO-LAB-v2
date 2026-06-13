@@ -2,12 +2,12 @@
 // Drops the AMCL `/pose` channel that ekf_node uses and instead consumes
 // `/scan` + `/map` directly via a precomputed Euclidean distance transform
 // (LikelihoodField). Each subsampled beam contributes a scalar Kalman
-// update — see Probabilistic Robotics §7.4.
+// update - see Probabilistic Robotics §7.4.
 //
 // This is the *advanced* EKF variant. The story for the wrong-init study:
 // linearising the scan model around an init pose that is far from truth
 // gives a useless Jacobian, so EKF-LF is expected to diverge under big
-// init errors — exactly the lesson we want in the paper.
+// init errors - exactly the lesson we want in the paper.
 //
 // Inputs: /cmd_vel, /imu, /map (transient_local), /scan
 // Outputs: /ekf_lf/pose, /ekf_lf/runtime_us
@@ -47,7 +47,7 @@ public:
     declare_parameter("frame_id", std::string("map"));
     declare_parameter("base_frame", std::string("base_footprint"));
     // Scan-likelihood tuning. stride=20 with a TB4 scan (~640 beams) keeps
-    // ~32 beams per update — enough info, light enough for 20 Hz, and
+    // ~32 beams per update - enough info, light enough for 20 Hz, and
     // sparse enough that the per-beam updates stay quasi-independent.
     declare_parameter("scan_stride",  20);
     declare_parameter("sigma_hit",     0.10);
@@ -65,7 +65,7 @@ public:
     Eigen::Vector3d x0 = mean;
     if (seed > 0 && (spread_xy > 0.0 || spread_yaw > 0.0)) {
       // Use a different seed XOR than KF/EKF so the LF variant lands at a
-      // distinct sampled init within the same Gaussian — otherwise EKF and
+      // distinct sampled init within the same Gaussian - otherwise EKF and
       // EKF-LF would always start at identical x0 and the comparison
       // degenerates.
       std::mt19937_64 rng(static_cast<std::uint64_t>(seed) ^ 0x1Fu);

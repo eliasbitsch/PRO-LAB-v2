@@ -5,7 +5,7 @@
 // Builds a precomputed Euclidean distance transform of an OccupancyGrid:
 // for every cell, the metric distance (in metres) to the nearest occupied
 // cell. A particle's beam endpoint then evaluates to a Gaussian density
-// over that distance — fast O(beams) per particle.
+// over that distance - fast O(beams) per particle.
 //
 // Why a 2-pass chamfer DT instead of an exact algorithm: the map is built
 // once and queried millions of times per scan-update, so a simple,
@@ -27,7 +27,7 @@ public:
   // Build from raw OccupancyGrid fields. `data` is row-major, length w*h,
   // with values in [-1, 100] (ROS convention). Cells with `data[i] >=
   // occupied_threshold` are treated as obstacles; everything else is free
-  // (including unknowns, which is conservative — we'd rather under-weight
+  // (including unknowns, which is conservative - we'd rather under-weight
   // far cells than over-weight them).
   void build(int w, int h, double resolution,
              double origin_x, double origin_y,
@@ -87,7 +87,7 @@ public:
 
   // Distance (m) to nearest obstacle at world coordinate (x, y). Returns
   // a "max" distance when off-map so beams that fall outside contribute
-  // a near-zero likelihood — equivalent to "this particle is making us
+  // a near-zero likelihood - equivalent to "this particle is making us
   // shoot rays into oblivion, treat it as bad".
   float distanceMeters(double x, double y) const {
     if (!valid_) {

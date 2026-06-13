@@ -14,7 +14,7 @@
     init_x:        3.00       # truth + 3.0 m
     init_y:        2.00       # truth + 2.0 m
     init_yaw:      0.00
-    init_spread_xy:  0.10     # 10 cm — over-confident
+    init_spread_xy:  0.10     # 10 cm - over-confident
     init_spread_yaw: 0.05
     init_cov:        0.01     # KF/EKF also over-confident
     num_particles:   500

@@ -1,7 +1,7 @@
 #pragma once
 // Extended Kalman Filter (pure, no ROS).
 //
-// Notation follows Thrun, Burgard, Fox — Probabilistic Robotics §3.3:
+// Notation follows Thrun, Burgard, Fox - Probabilistic Robotics §3.3:
 //   x_t = g(u_t, x_{t-1}) + ε_t       (non-linear motion model)
 //   z_t = h(x_t)         + δ_t       (non-linear measurement model)
 //   G_t = ∂g/∂x  evaluated at (u_t, μ_{t-1})    (motion Jacobian)
@@ -118,7 +118,7 @@ public:
   // distance field times the endpoint's Jacobian w.r.t. the pose.
   //
   // Iterates per beam and applies the sequential Joseph-style scalar
-  // update — that's numerically the same as stacking all beams into a
+  // update - that's numerically the same as stacking all beams into a
   // single measurement, but lets us (a) apply Mahalanobis gating per
   // beam and (b) drop ones that fall outside the map.
   //
@@ -130,7 +130,7 @@ public:
   //   stride          subsample 1-in-N beams (10..30 is sane)
   //   sigma_hit       std-dev of the per-beam likelihood (m)
   //   d_max           gating: skip beams whose miss distance exceeds this
-  //                          (these are outliers — open doors, dynamic
+  //                          (these are outliers - open doors, dynamic
   //                           obstacles, or simply wrong init)
   void updateScanLikelihood(const LikelihoodField& lf,
                             const std::vector<float>& ranges,
@@ -148,7 +148,7 @@ public:
     // 2-cell finite-difference step for the gradient. Cell size isn't
     // exposed by LikelihoodField, so we fix a small metric step that's
     // bigger than typical map resolution (5 cm) but smaller than wall
-    // thickness — 0.10 m is a fine compromise.
+    // thickness - 0.10 m is a fine compromise.
     const double h_step = 0.10;
     const double cos_yaw = std::cos(syaw);
     const double sin_yaw = std::sin(syaw);

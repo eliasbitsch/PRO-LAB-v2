@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# PRO-LAB launcher — a FastMCP-style terminal front-end for the whole study.
+# PRO-LAB launcher - a FastMCP-style terminal front-end for the whole study.
 # Boxed banner + live container status + a menu that starts every pipeline
 # (live demo, single run, multi-seed sweep, analysis, paper build).
 #
@@ -66,7 +66,7 @@ menu() {
 }
 
 demo_help() {
-  printf "\n   %b┌─ LIVE DEMO — \"landmarks are king\" ─────────────────────────┐%b\n" "$MG" "$R"
+  printf "\n   %b┌─ LIVE DEMO - \"landmarks are king\" ─────────────────────────┐%b\n" "$MG" "$R"
   printf "   %b│%b  1. DRIVE   use the Teleop panel (or arrow keys) to move\n" "$MG" "$R"
   printf "   %b│%b  2. KIDNAP  pick the Kidnap tool, drag an arrow → robot warps\n" "$MG" "$R"
   printf "   %b│%b  3. LANDMARKS WIN  keep driving: KF/EKF snap back on their own\n" "$MG" "$R"
@@ -79,7 +79,7 @@ demo_help() {
 kill_sim() {
   printf "\n   stopping the simulation (clean container reset)…\n"
   if docker restart "$CONTAINER" >/dev/null 2>&1; then
-    printf "   %bsim stopped%b — container idle, ready to launch again\n" "$GR" "$R"
+    printf "   %bsim stopped%b - container idle, ready to launch again\n" "$GR" "$R"
   else
     printf "   %bcould not reach container %s%b\n" "$RE" "$CONTAINER" "$R"
   fi

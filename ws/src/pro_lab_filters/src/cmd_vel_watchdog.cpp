@@ -2,7 +2,7 @@
 // zero-Twist when the input goes silent for `timeout` seconds.
 //
 // Key-hold publishers (RViz teleop panel, teleop_twist_keyboard) only emit
-// while a key is held. On release they stop publishing — but Gazebo's
+// while a key is held. On release they stop publishing - but Gazebo's
 // diff-drive plugin keeps applying the last command forever, so the robot
 // rolls on. This relay closes that gap.
 #include <chrono>

@@ -6,7 +6,7 @@
 # mislocalized (offset_5m, overconfident_wrong...) the detector's association
 # pose jumps several metres, the 0.5 m gate rejects every cluster, and the
 # landmark-based filters (KF/EKF) silently lose their measurement stream.
-# AMCL still publishes /amcl_pose (its estimate for our metrics) — it just
+# AMCL still publishes /amcl_pose (its estimate for our metrics) - it just
 # no longer owns the TF tree.
 amcl:
   ros__parameters:

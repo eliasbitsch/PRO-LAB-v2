@@ -14,7 +14,7 @@
     init_spread_yaw: 0.05
     init_cov:        0.01
     num_particles:   500
-    # Process noise — small means "trust the model"
+    # Process noise - small means "trust the model"
     q_scale:        0.005           # KF/EKF
     motion_noise_v: 0.005           # PF
     motion_noise_w: 0.005           # PF

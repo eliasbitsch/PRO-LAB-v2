@@ -2,7 +2,7 @@
 //
 // Pie-slice "dpad" with a circular Stop button in the centre. Press-and-hold
 // to drive, release (or move outside) to stop. Publishes geometry_msgs/Twist
-// on /cmd_vel_in — cmd_vel_watchdog forwards it to /cmd_vel and zeroes after
+// on /cmd_vel_in - cmd_vel_watchdog forwards it to /cmd_vel and zeroes after
 // a short silence, so the release-to-stop semantic is enforced even if the
 // last message gets dropped.
 //

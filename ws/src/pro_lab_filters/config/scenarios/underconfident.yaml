@@ -1,4 +1,4 @@
-# Right pose, huge uncertainty. Should converge — but slowly for the
+# Right pose, huge uncertainty. Should converge - but slowly for the
 # parametric filters because their initial covariance is so large that early
 # innovations barely move the mean.
 # Truth spawn: (0.0, 0.0, yaw=0). Mean is at truth, just a huge uncertainty.

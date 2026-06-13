@@ -20,5 +20,5 @@ landmarks:
 # Observation noise (used by the simulated detector).
 range_sigma:   0.10        # m
 bearing_sigma: 0.05        # rad
-max_range:     6.0         # m — detector "sees" landmark only if closer
+max_range:     6.0         # m - detector "sees" landmark only if closer
 fov_rad:       3.14159     # full 2π by default (omnidirectional)

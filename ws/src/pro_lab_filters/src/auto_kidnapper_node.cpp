@@ -46,7 +46,7 @@ public:
               [](const KidnapEvent & a, const KidnapEvent & b) { return a.t < b.t; });
 
     if (schedule_.empty())
-      RCLCPP_INFO(get_logger(), "auto_kidnapper: empty schedule — no-op");
+      RCLCPP_INFO(get_logger(), "auto_kidnapper: empty schedule - no-op");
     else
       RCLCPP_INFO(get_logger(), "auto_kidnapper: %zu kidnap event(s) scheduled",
                   schedule_.size());

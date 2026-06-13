@@ -23,16 +23,16 @@ Outputs (aggregate across all scenarios):
   all_summaries.csv              concat of every <scenario>_seed*_summary.csv
 
 Output formats (--format):
-  png   bitmap @ 200 dpi — README + PowerPoint
+  png   bitmap @ 200 dpi - README + PowerPoint
   pgf   LaTeX-aware, drop \\input{plot.pgf} into IEEE template
-  pdf   vector PDF — plain \\includegraphics
+  pdf   vector PDF - plain \\includegraphics
 
 Usage:
     python3 scripts/analyze_results.py --in ./results
     python3 scripts/analyze_results.py --in ./results --format pgf
     python3 scripts/analyze_results.py --in ./results --filters kf,ekf,pf,amcl
 
-numpy + matplotlib only — no pandas, runs anywhere.
+numpy + matplotlib only - no pandas, runs anywhere.
 """
 from __future__ import annotations
 import argparse
@@ -104,12 +104,12 @@ def _jump_indices(xs, ys, jump_threshold=0.5, min_gap_ticks=20):
     """Return the indices where step length > threshold (kidnap event onsets).
 
     For each i in the result: position[i-1] is the LAST point before the jump,
-    position[i] is the FIRST point after — those are the markers we want to
+    position[i] is the FIRST point after - those are the markers we want to
     pin "kidnap" annotations to.
 
     Adjacent jumps within `min_gap_ticks` are collapsed into one event,
     because Gazebo's `set_pose` often manifests as 2-4 consecutive
-    sub-jumps as the rigid body settles into the new pose — those are one
+    sub-jumps as the rigid body settles into the new pose - those are one
     logical kidnap, not several.
     """
     import numpy as _np
@@ -132,7 +132,7 @@ def _jump_indices(xs, ys, jump_threshold=0.5, min_gap_ticks=20):
 
 def _plot_path_gradient(ax, xs, ys, base_color, label, zorder, ts=None,
                         lw=1.8, ls="-"):
-    """Draw a path with progressive alpha — early dim, late solid — so when
+    """Draw a path with progressive alpha - early dim, late solid - so when
     the path is broken into multiple segments (kidnap teleports) the reader
     can see WHICH segment came first vs last. Uses matplotlib LineCollection
     so per-segment alpha is supported.
@@ -173,7 +173,7 @@ LANDMARKS = [
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# Backend setup — must be called before importing pyplot
+# Backend setup - must be called before importing pyplot
 # ──────────────────────────────────────────────────────────────────────────
 def configure_backend(fmt: str):
     if fmt == "pgf":
@@ -251,7 +251,7 @@ def discover_runs(in_dir: Path):
 def stack_runs(paths: list[Path], col: str) -> tuple[np.ndarray, np.ndarray]:
     """Load `col` from each CSV in `paths`, resample to a common time grid,
     and return (t, stacked) where stacked is shape (n_runs, n_steps).
-    Resampling uses the union of time vectors and linear interpolation —
+    Resampling uses the union of time vectors and linear interpolation -
     keeps it dependency-free."""
     t_all = []
     series = []
@@ -298,11 +298,11 @@ def plot_filter_explainer(scenario: str, paths: list[Path], filter_name: str,
     """Lecture-style 3-panel figure (cf. Thrun §3.3) for a single filter:
 
       Panel 1: truth + DEAD-RECKONING estimate (ekf_dr: pure wheel-odometry
-               integration, no IMU, no landmarks) — "odometry drifts"
-      Panel 2: same + the dead-reckoner's 2σ ellipses along the whole path —
+               integration, no IMU, no landmarks) - "odometry drifts"
+      Panel 2: same + the dead-reckoner's 2σ ellipses along the whole path -
                "without correction, uncertainty grows unbounded"
       Panel 3: truth + the ACTUAL filter estimate + its 2σ ellipses +
-               landmark stars — "measurement updates bound the error"
+               landmark stars - "measurement updates bound the error"
 
     The dead-reckoning baseline is real data from the ekf_dr twin that runs
     alongside every experiment (predict-only EKF), not a synthetic mock-up.
@@ -380,11 +380,11 @@ def plot_filter_explainer(scenario: str, paths: list[Path], filter_name: str,
     dr_col = "tab:orange"
     all_mask = np.ones_like(tx, dtype=bool)
 
-    # Panel 1: truth vs dead-reckoning path — drift visible, no ellipses.
+    # Panel 1: truth vs dead-reckoning path - drift visible, no ellipses.
     draw_truth(axs[0])
     draw_est(axs[0], dx, dy, dr_col, "Odometry (dead reckoning)")
 
-    # Panel 2: same + the dead-reckoner's covariance along the WHOLE path —
+    # Panel 2: same + the dead-reckoner's covariance along the WHOLE path -
     # it grows without bound because nothing ever corrects it.
     draw_truth(axs[1])
     draw_est(axs[1], dx, dy, dr_col, "Odometry (dead reckoning)")
@@ -411,7 +411,7 @@ def plot_filter_explainer(scenario: str, paths: list[Path], filter_name: str,
     # lower-right corner of the zoom window.
     axs[0].legend(loc="upper left", fontsize=11)
     axs[2].legend(loc="upper left", fontsize=11)
-    fig.suptitle(f"{scenario} — {f.upper()} localization: odometry drift → "
+    fig.suptitle(f"{scenario} - {f.upper()} localization: odometry drift → "
                  "growing uncertainty → landmark-based correction", fontsize=11)
     fig.tight_layout()
     fig.savefig(out / f"{scenario}_{f}_explainer.{fmt}")
@@ -426,7 +426,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
         t, stk = stack_runs(paths, f"{f}_err_xy")
         plot_band(ax, t, stk, COLOURS.get(f, "k"), f.upper())
     ax.set_xlabel("time [s]"); ax.set_ylabel("xy error [m]")
-    ax.set_title(f"{scenario} — xy error (mean ± 1σ over {len(paths)} seeds)")
+    ax.set_title(f"{scenario} - xy error (mean ± 1σ over {len(paths)} seeds)")
     _legend_right(ax); ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(out / f"{scenario}_error_xy.{fmt}"); plt.close(fig)
@@ -437,7 +437,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
         t, stk = stack_runs(paths, f"{f}_err_yaw")
         plot_band(ax, t, stk, COLOURS.get(f, "k"), f.upper())
     ax.set_xlabel("time [s]"); ax.set_ylabel("yaw error [rad]")
-    ax.set_title(f"{scenario} — yaw error (mean ± 1σ over {len(paths)} seeds)")
+    ax.set_title(f"{scenario} - yaw error (mean ± 1σ over {len(paths)} seeds)")
     _legend_right(ax); ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(out / f"{scenario}_error_yaw.{fmt}"); plt.close(fig)
@@ -445,7 +445,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
     # Estimated position uncertainty over time: σ_xy = sqrt(Pxx + Pyy).
     # Shows the filter's OWN belief about its accuracy: grows during
     # landmark-free stretches, shrinks on corrections. The ekf_dr twin
-    # (dead reckoning) grows monotonically — the textbook contrast.
+    # (dead reckoning) grows monotonically - the textbook contrast.
     fig, ax = plt.subplots(figsize=(8, 4))
     drew_unc = False
     for f in list(filters) + ["ekf_dr"]:
@@ -466,7 +466,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
         ax.set_yscale("log")
         ax.set_xlabel("time [s]")
         ax.set_ylabel(r"estimated position uncertainty  $\sigma_{xy}$ [m]")
-        ax.set_title(f"{scenario} — filter-estimated uncertainty over time")
+        ax.set_title(f"{scenario} - filter-estimated uncertainty over time")
         _legend_right(ax, fontsize=10); ax.grid(alpha=0.3, which="both")
         fig.tight_layout()
         fig.savefig(out / f"{scenario}_uncertainty.{fmt}")
@@ -486,7 +486,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
                    label="95% χ² band")
         ax.set_yscale("symlog", linthresh=1.0)
         ax.set_xlabel("time [s]"); ax.set_ylabel("NEES")
-        ax.set_title(f"{scenario} — filter consistency (NEES, 3 DoF)")
+        ax.set_title(f"{scenario} - filter consistency (NEES, 3 DoF)")
         _legend_right(ax); ax.grid(alpha=0.3)
         fig.tight_layout()
         fig.savefig(out / f"{scenario}_nees.{fmt}")
@@ -498,13 +498,13 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
         fig, ax = plt.subplots(figsize=(8, 3.5))
         plot_band(ax, t, stk, COLOURS["pf"], "PF ESS")
         ax.set_xlabel("time [s]"); ax.set_ylabel("Effective Sample Size")
-        ax.set_title(f"{scenario} — PF Effective Sample Size")
+        ax.set_title(f"{scenario} - PF Effective Sample Size")
         ax.grid(alpha=0.3); _legend_right(ax)
         fig.tight_layout()
         fig.savefig(out / f"{scenario}_pf_ess.{fmt}")
         plt.close(fig)
 
-    # Landmark detection rate — empirical evidence that the detector is
+    # Landmark detection rate - empirical evidence that the detector is
     # actually producing observations (not silently dead-reckoning).
     # Y = number of landmarks visible per logging tick; X = time.
     t, stk = stack_runs(paths, "n_landmarks_detected")
@@ -516,14 +516,14 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
         max_seen = int(np.nanmax(stk)) if stk.size else 0
         ax.set_xlabel("time [s]")
         ax.set_ylabel("# landmarks in scan")
-        ax.set_title(f"{scenario} — landmark detections per tick "
+        ax.set_title(f"{scenario} - landmark detections per tick "
                      f"(max={max_seen}, sum over run={total})")
         ax.grid(alpha=0.3); _legend_right(ax)
         fig.tight_layout()
         fig.savefig(out / f"{scenario}_landmark_detections.{fmt}")
         plt.close(fig)
 
-    # Trajectory (xy paths) — overlay every seed thinly per filter; truth bold.
+    # Trajectory (xy paths) - overlay every seed thinly per filter; truth bold.
     fig, ax = plt.subplots(figsize=(7, 7))
     truth_drawn = False
     for p in paths:
@@ -542,7 +542,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
     for f in filters:
         ax.plot([], [], color=COLOURS.get(f, "gray"), label=f.upper())
     ax.set_xlabel("x [m]"); ax.set_ylabel("y [m]")
-    ax.set_title(f"{scenario} — trajectories ({len(paths)} seed runs)")
+    ax.set_title(f"{scenario} - trajectories ({len(paths)} seed runs)")
     ax.set_aspect("equal", adjustable="datalim")
     _legend_right(ax); ax.grid(alpha=0.3)
     fig.tight_layout()
@@ -567,14 +567,14 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
             ax.scatter(mx, my, marker="*", s=120, color="tab:blue",
                        edgecolor="k", zorder=9)
         ax.set_xlabel("x [m]"); ax.set_ylabel("y [m]")
-        ax.set_title(f"{scenario} — trajectory comparison (all filters)")
+        ax.set_title(f"{scenario} - trajectory comparison (all filters)")
         ax.set_aspect("equal", adjustable="datalim")
         _legend_right(ax); ax.grid(alpha=0.3)
         fig.tight_layout()
         fig.savefig(out / f"{scenario}_trajectory_clean.{fmt}")
         plt.close(fig)
 
-    # State vs time — truth (black) + each filter estimate, per axis (x, y, yaw).
+    # State vs time - truth (black) + each filter estimate, per axis (x, y, yaw).
     # Lecture-style "true vs estimated" plot (slides 6/7). Uses the first run.
     ts = read_timeseries(paths[0])
     if "time" in ts and "truth_x" in ts:
@@ -588,7 +588,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
                     ax.plot(ts["time"], ts[col], color=COLOURS.get(f, "gray"),
                             lw=1.2, alpha=0.85, label=f.upper())
             ax.set_ylabel(f"{axis} [{unit}]"); ax.grid(alpha=0.3)
-        axs[0].set_title(f"{scenario} — state estimate vs truth over time")
+        axs[0].set_title(f"{scenario} - state estimate vs truth over time")
         axs[0].legend(ncol=len(filters) + 1, fontsize=8, loc="upper right")
         axs[-1].set_xlabel("time [s]")
         fig.tight_layout()
@@ -672,7 +672,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
                 ax.plot(fx, fy, color=col, ls="--", lw=1.6,
                         label=f"{f.upper()} estimate", zorder=7)
             # 2σ uncertainty ellipses from the full 2D covariance (Pxx, Pyy, Pxy),
-            # subsampled along the path. 2σ ≈ 95% confidence — standard paper viz.
+            # subsampled along the path. 2σ ≈ 95% confidence - standard paper viz.
             # Old CSVs only logged a single Pxx column; fall back to a circle then.
             cxx_k, cyy_k, cxy_k = f"{f}_cov_xx", f"{f}_cov_yy", f"{f}_cov_xy"
             if cxx_k not in ts and ck in ts:
@@ -712,7 +712,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
             ax.scatter([ts[xk][-1]], [ts[yk][-1]], c="red", s=60,
                        zorder=10, label="Estimated End")
             ax.set_xlabel("x [m]"); ax.set_ylabel("y [m]")
-            title = f"{scenario} — {f.upper()}: trajectory + uncertainty"
+            title = f"{scenario} - {f.upper()}: trajectory + uncertainty"
             if has_kidnaps:
                 title += f"  ({kidnap_idx.size} kidnap events)"
             ax.set_title(title)
@@ -896,12 +896,12 @@ def aggregate_plots(in_dir: Path, out_dir: Path, fmt: str, filters, plt):
     }
     grouped_bar(scenarios, rt_m, rt_s, filters,
                 "wall-clock per tick [µs]  (log)",
-                "Per-tick runtime — measured wall-clock + Big-O complexity",
+                "Per-tick runtime - measured wall-clock + Big-O complexity",
                 out_dir / f"runtime_comparison.{fmt}", plt, log=True,
                 label_suffix=big_o)
 
     # Convergence rate: fraction of seeds whose final-error_xy < 0.20 m,
-    # computed from the timeseries (recovery-aware) — NOT the metrics_node
+    # computed from the timeseries (recovery-aware) - NOT the metrics_node
     # `converged` flag, which never fires reliably.
     rate = convergence_from_timeseries(in_dir, scenarios, filters, threshold=0.20)
     grouped_bar(scenarios, rate, defaultdict(lambda: [0.0] * len(scenarios)),

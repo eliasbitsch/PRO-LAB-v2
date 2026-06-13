@@ -7,7 +7,7 @@
 #
 # Pipeline:
 #   1) Stop any old gz sim, ros2 launch, container processes.
-#   2) (no-op — Gazebo runs inside the container, see step 5)
+#   2) (no-op - Gazebo runs inside the container, see step 5)
 #   3) Start docker stack (prolab only).
 #   4) Build workspace inside the prolab container.
 #   5) Launch wrong_init_experiment ROS stack inside the container.
@@ -111,9 +111,9 @@ fi
 rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* 2>/dev/null || true
 sleep 3
 
-# ---------- 2) (gz now runs inside the container — see step 5) --------------
+# ---------- 2) (gz now runs inside the container - see step 5) --------------
 
-c_gray "[2/6] Skipping native Gazebo — gz starts inside prolab container via start_gz:=true."
+c_gray "[2/6] Skipping native Gazebo - gz starts inside prolab container via start_gz:=true."
 
 # ---------- 3) Docker stack --------------------------------------------------
 
@@ -125,14 +125,14 @@ wait_for 30 "prolab_jazzy container running" \
   || exit 1
 
 # Allow the container's X clients (RViz, gz GUI) to talk to the host X server.
-# Idempotent — does nothing if X isn't reachable (e.g. headless server).
+# Idempotent - does nothing if X isn't reachable (e.g. headless server).
 if [[ "$USE_RVIZ" == "true" ]] && command -v xhost >/dev/null 2>&1; then
   xhost +local:root >/dev/null 2>&1 || true
 fi
 
 # Named volumes are created with root ownership by default. The container runs
 # as uid 1001 (ros), so colcon can't write to build/log/install. Fix every run
-# (idempotent — chown is a no-op if already correct).
+# (idempotent - chown is a no-op if already correct).
 docker exec --user root prolab_jazzy bash -lc '
   chown -R ros:ros /home/ros/ws/build /home/ros/ws/install /home/ros/ws/log /home/ros/.gz 2>/dev/null || true
 ' >/dev/null
@@ -147,7 +147,7 @@ if (( SKIP_BUILD == 0 )); then
           > /tmp/build.log 2>&1 && echo BUILD_OK
       " | grep -q BUILD_OK
   then
-    c_red "BUILD FAILED — last lines of /tmp/build.log:"
+    c_red "BUILD FAILED - last lines of /tmp/build.log:"
     in_container "tail -30 /tmp/build.log" >&2 || true
     exit 1
   fi
@@ -185,16 +185,16 @@ c_gray "      waiting for $PROBE_TOPIC to publish (non-fatal)..."
 if ! wait_for 30 "$PROBE_TOPIC publishing" \
      "in_container 'timeout 5 ros2 topic echo --once $PROBE_TOPIC > /dev/null 2>&1'"
 then
-  c_red "WARN: $PROBE_TOPIC did not publish in 30s — opening viz anyway so you can debug."
+  c_red "WARN: $PROBE_TOPIC did not publish in 30s - opening viz anyway so you can debug."
   c_gray "      tail -f /tmp/launch.log to investigate."
 fi
 
 # ---------- 6) Browser -------------------------------------------------------
 
 if [[ "$VIZ" == "rviz" ]]; then
-  c_gray "[6/6] viz=rviz — RViz window opened by launch file"
+  c_gray "[6/6] viz=rviz - RViz window opened by launch file"
 else
-  c_gray "[6/6] viz=none — skipping visualization"
+  c_gray "[6/6] viz=none - skipping visualization"
 fi
 
 echo

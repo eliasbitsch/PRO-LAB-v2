@@ -35,7 +35,7 @@ QIcon makeKidnapIcon() {
 namespace pro_lab_rviz {
 
 KidnapTool::KidnapTool() : PoseTool() {
-  // Keyboard shortcut "k" — quick to reach next to "p" (Pose Estimate).
+  // Keyboard shortcut "k" - quick to reach next to "p" (Pose Estimate).
   shortcut_key_ = 'k';
 }
 
@@ -75,7 +75,7 @@ void KidnapTool::onPoseSet(double x, double y, double theta) {
   msg.pose.pose.orientation.z = q.z();
   msg.pose.pose.orientation.w = q.w();
 
-  // Covariance is unused by robot_teleporter — leave zero.
+  // Covariance is unused by robot_teleporter - leave zero.
   pub_->publish(msg);
 }
 

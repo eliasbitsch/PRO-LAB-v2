@@ -3,9 +3,9 @@
 //
 // Wrong-init experiment knobs:
 //   init_distribution: "gaussian" | "uniform"
-//   init_x, init_y, init_yaw      — Gaussian center / Uniform center
-//   init_spread_xy, init_spread_yaw — Gaussian std-dev (per axis)
-//   init_extent_xy, init_extent_yaw — Uniform half-extent (per axis)
+//   init_x, init_y, init_yaw      - Gaussian center / Uniform center
+//   init_spread_xy, init_spread_yaw - Gaussian std-dev (per axis)
+//   init_extent_xy, init_extent_yaw - Uniform half-extent (per axis)
 //
 // Set init_x/init_y/init_yaw far from truth + a tiny init_spread_* to study
 // "wrong + over-confident" failure modes; use init_distribution=uniform with
@@ -56,12 +56,12 @@ public:
     // Lidar likelihood-field knobs
     declare_parameter("scan_subsample",  6);     // every Nth beam (~60 beams ≈ AMCL default)
     declare_parameter("scan_sigma",      0.20);  // AMCL: sigma_hit=0.2
-    declare_parameter("scan_w_rand",     0.50);  // AMCL: z_rand=0.5 — outlier robustness
+    declare_parameter("scan_w_rand",     0.50);  // AMCL: z_rand=0.5 - outlier robustness
     declare_parameter("scan_max_range",  10.0);
     declare_parameter("scan_min_range",  0.10);
     // Motion-gating thresholds (AMCL: update_min_d=0.25, update_min_a=0.2):
     // skip scan update unless robot has actually moved this much. This is
-    // the *main* anti-jitter trick — without it, repeated reweighting on
+    // the *main* anti-jitter trick - without it, repeated reweighting on
     // identical stationary scans makes the estimate dance.
     declare_parameter("update_min_d",    0.25);
     declare_parameter("update_min_a",    0.20);
@@ -74,7 +74,7 @@ public:
     declare_parameter("alpha4", 0.2);
     declare_parameter("alpha5", 0.2);
     declare_parameter("alpha6", 0.2);
-    // Augmented-MCL random-particle injection. OFF by default — only useful
+    // Augmented-MCL random-particle injection. OFF by default - only useful
     // for global/kidnap recovery; during normal driving it scatters particles
     // across the map and the estimate diverges. Enable in kidnapped.yaml.
     declare_parameter("use_augmented_mcl", false);
@@ -171,7 +171,7 @@ public:
         pf_.updateImuYaw(pro_lab_filters::quat_to_yaw(m->orientation), r_yaw_imu_);
       });
     // AMCL-style global reinit. RViz's built-in "2D Pose Estimate" tool
-    // publishes here. This ONLY re-seeds the PF — it does not move the GZ
+    // publishes here. This ONLY re-seeds the PF - it does not move the GZ
     // model. The robot_teleporter listens on /kidnap_pose instead, so the
     // two experiments stay independent.
     // Spread is taken from the message covariance (sigma = sqrt(cov[0])).

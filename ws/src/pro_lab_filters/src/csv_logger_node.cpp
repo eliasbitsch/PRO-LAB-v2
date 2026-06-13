@@ -254,7 +254,7 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
   auto node = std::make_shared<CsvLogger>();
   rclcpp::spin(node);
-  // On SIGINT spin() returns — write the summary + flush before shutdown.
+  // On SIGINT spin() returns - write the summary + flush before shutdown.
   node->writeSummary();
   node->closeFiles();
   rclcpp::shutdown();

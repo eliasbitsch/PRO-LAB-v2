@@ -2,7 +2,7 @@
 //
 // State: [x, y, yaw, vx, vy, omega]   (6D, world-frame velocities)
 //
-// Why 6D — paired with the 3D EKF on purpose:
+// Why 6D - paired with the 3D EKF on purpose:
 //   The KF cannot linearise anything; it requires its motion model to be
 //   linear in the state. The natural Unicycle model x_{k+1} = x_k + v·cos(yaw)·dt
 //   is NOT linear in yaw, so we cannot use it directly. The workaround is to
@@ -11,19 +11,19 @@
 //       y_{k+1}  = y_k  + vy · dt          (linear)
 //       yaw_{k+1}= yaw_k+ omega · dt       (linear)
 //   For these equations to hold, the velocity components have to live IN the
-//   state — hence n=6 (vs. n=3 for the EKF, which keeps v/w as control inputs
+//   state - hence n=6 (vs. n=3 for the EKF, which keeps v/w as control inputs
 //   and instead linearises the Unicycle model with a Jacobian at every tick).
 //   Trade-off: KF pays linearity with bigger matrices (predict ~ n^3 → 6^3=216
 //   flops); EKF pays nonlinearity with per-tick Jacobian construction at n=3.
 //
 // Inputs:
-//   /imu                              Imu                  — yaw + gyro_z
-//   /odom                             Odometry             — encoder v + yaw rate
-//   /landmarks/observations           Float32MultiArray    — stride-3 [id, range, bearing]
+//   /imu                              Imu                  - yaw + gyro_z
+//   /odom                             Odometry             - encoder v + yaw rate
+//   /landmarks/observations           Float32MultiArray    - stride-3 [id, range, bearing]
 //
 // Output: /kf/pose, /kf/runtime_us
 //
-// Notable: /cmd_vel (a control input) is intentionally NOT consumed — using it
+// Notable: /cmd_vel (a control input) is intentionally NOT consumed - using it
 // would re-introduce a non-linear body→world rotation in the predict. The
 // velocities live in the state (constant-velocity model, world frame). The
 // wheel ODOMETRY (a measurement, real encoder) anchors them: its body speed is
@@ -60,7 +60,7 @@ public:
     declare_parameter("init_y", 0.0);
     declare_parameter("init_yaw", 0.0);
     declare_parameter("init_cov", 0.1);
-    declare_parameter("init_cov_vel", 0.5);   // velocity components — wider since we have no prior
+    declare_parameter("init_cov_vel", 0.5);   // velocity components - wider since we have no prior
     declare_parameter("init_spread_xy",  0.0);
     declare_parameter("init_spread_yaw", 0.0);
     declare_parameter("rng_seed", 0);

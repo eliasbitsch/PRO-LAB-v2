@@ -64,7 +64,7 @@ def generate_launch_description():
         # available depot map, which is incomplete) → clean scan-vs-map.
         DeclareLaunchArgument('x_pose',     default_value='0.00'),
         DeclareLaunchArgument('y_pose',     default_value='0.00'),
-        DeclareLaunchArgument('yaw',        default_value='0.0'),      # face +x (east) — IMU-aligned, avoids filter init issues
+        DeclareLaunchArgument('yaw',        default_value='0.0'),      # face +x (east) - IMU-aligned, avoids filter init issues
         DeclareLaunchArgument('map',
                               default_value=os.path.join(nav2_bringup, 'maps', 'warehouse.yaml')),
         DeclareLaunchArgument('use_rviz',     default_value='true'),
@@ -83,7 +83,7 @@ def generate_launch_description():
             description='Random seed for filter init sampling and PF RNG. '
                         '0 = deterministic (single-run baseline). '
                         '>0 enables Gaussian sampling around init_x/y/yaw '
-                        'using init_spread_xy/yaw — used for 10-run sweeps.'),
+                        'using init_spread_xy/yaw - used for 10-run sweeps.'),
         DeclareLaunchArgument('gz_gui',       default_value='true',
                               description='Show the Gazebo GUI window. Set false for batch '
                                           'runs (run_experiments.sh / wrong_init_batch.sh).'),
@@ -110,7 +110,7 @@ def generate_launch_description():
     #   NVIDIA dGPU in docker-compose (__EGL_VENDOR_LIBRARY_FILENAMES), so the
     #   gpu_lidar raycasting runs on the RTX (verified: gz appears as a graphics
     #   process on the NVIDIA in nvidia-smi). Without the flag gz falls back to
-    #   GLX on DISPLAY=:1 and renders on the Mesa/iGPU path instead — slower and
+    #   GLX on DISPLAY=:1 and renders on the Mesa/iGPU path instead - slower and
     #   not what we want for the sweeps.
     #
     #   Interactive / with GUI (gz_gui:=true): the GUI window uses *GLX* on the
@@ -171,8 +171,8 @@ def generate_launch_description():
     post_sdf = os.path.join(pkg_share, 'config', 'landmark_post.sdf')
     # Compact triangle bracketing the driven path (spawn -8,-0.5 → stop -6,1):
     # one NE, one S, one N. Close together (~2.5 m spread) so the trajectory +
-    # covariance plot is tightly framed, and close to the path so every pose —
-    # including the final stop — sees a post and the landmark-based KF/EKF keep
+    # covariance plot is tightly framed, and close to the path so every pose -
+    # including the final stop - sees a post and the landmark-based KF/EKF keep
     # getting corrections instead of dead-reckoning away.
     # ALL real warehouse pillars auto-discovered from the occupancy map.
     # Spawning our thick I-beams here overlays them on the map's existing
@@ -189,7 +189,7 @@ def generate_launch_description():
     # The AprilTag plates sit MARKER_OFFSET in front of each pillar toward the
     # aisle (so the camera has line of sight). The localisation landmark is now
     # the TAG, not the I-beam centre, so the KF/EKF map AND the detector's
-    # validation map use the MARKER coords — otherwise the camera (measuring to
+    # validation map use the MARKER coords - otherwise the camera (measuring to
     # the tag) is biased ~0.3 m against a pillar-centre map. Sign: left column
     # (x<0) offsets +x toward centre, right column -x.
     MARKER_OFFSET = 0.6
@@ -205,10 +205,10 @@ def generate_launch_description():
         'landmark_ys':  [c[1] for c in marker_coords],
     }
     # Spawn the I-beam posts at the pillar coords, and an AprilTag plate (id =
-    # landmark id) at each marker coord. The plate's -x face (non-mirrored — see
+    # landmark id) at each marker coord. The plate's -x face (non-mirrored - see
     # gen_marker_models.py) is turned into the aisle: yaw=pi for the left column
     # (robot is at +x), yaw=0 for the right column. The detector READS these IDs
-    # off the camera — no ground-truth leak in the measurement.
+    # off the camera - no ground-truth leak in the measurement.
     aruco_dir = os.path.join(pkg_share, 'config', 'aruco')
     spawn_landmarks = TimerAction(period=7.0, actions=[
         Node(package='ros_gz_sim', executable='create',
@@ -243,14 +243,14 @@ def generate_launch_description():
     )
 
     # ── Nav2 (provides AMCL as external comparison track) ───────────────
-    # Filters do NOT consume /pose any more — KF/EKF/PF each have their own
+    # Filters do NOT consume /pose any more - KF/EKF/PF each have their own
     # measurement channel (landmarks for KF/EKF, scan-likelihood for PF).
     # AMCL runs solely so its output can be logged alongside the filters
     # for the "our filters vs Nav2 standard" comparison plot.
     # params_file: stock nav2 params with amcl.tf_broadcast=false. Our
     # map_odom_tf_publisher owns map->odom (static, spawn-derived ground
-    # truth). If AMCL also broadcast it, the two would fight and — whenever
-    # AMCL is mislocalized, which is the POINT of the wrong-init scenarios —
+    # truth). If AMCL also broadcast it, the two would fight and - whenever
+    # AMCL is mislocalized, which is the POINT of the wrong-init scenarios -
     # the landmark detector's association pose jumps metres off, the gate
     # rejects every cluster, and KF/EKF silently lose their measurements.
     nav2 = TimerAction(period=8.0, actions=[
@@ -300,7 +300,7 @@ def generate_launch_description():
 
     # ── cmd_vel watchdog ────────────────────────────────────────────────
     # The RViz teleop panel (and other key-hold publishers) only publish
-    # while a key is held. On release they stop publishing — but Gazebo
+    # while a key is held. On release they stop publishing - but Gazebo
     # keeps applying the last twist forever. This relay forwards
     # /cmd_vel_in to /cmd_vel and zeroes /cmd_vel after a short silence,
     # so releasing the button actually stops the robot.
@@ -337,12 +337,12 @@ def generate_launch_description():
         }],
     )
 
-    # Landmark detector — REAL camera-based AprilTag (36h11) detection. The OAK-D
+    # Landmark detector - REAL camera-based AprilTag (36h11) detection. The OAK-D
     # reads each pillar's marker ID and estimates its range/bearing from the
     # image (no ground-truth leak in the measurement). Publishes the same
     # /landmarks/observations [id, range, bearing] the KF/EKF already consume.
     # landmark_params (the a-priori pillar map) is used ONLY to publish a
-    # validation error against ground truth — never to label/associate.
+    # validation error against ground truth - never to label/associate.
     landmark_detector = Node(
         package='pro_lab_filters',
         executable='apriltag_landmark_detector_node',
@@ -363,7 +363,7 @@ def generate_launch_description():
         }],
     )
 
-    # Filter selector — defined here so the conditional map_odom_* nodes
+    # Filter selector - defined here so the conditional map_odom_* nodes
     # below can branch on which filter is active. Used again at the
     # filter-node block for the actual KF/EKF/PF instantiation.
     run_kf     = PythonExpression(["'", filter_sel, "' in ('kf',     'all')"])
@@ -375,13 +375,13 @@ def generate_launch_description():
     # gz anchors the odom frame at the robot's SPAWN pose (odom->base == 0 at
     # spawn), NOT at the world origin. To make `map` coincide with the world
     # frame we offset map->odom by the spawn pose (x_pose, y_pose). Then
-    # map->base_footprint == the robot's true WORLD pose — which is what
+    # map->base_footprint == the robot's true WORLD pose - which is what
     # truth_relay reads and what every filter is initialised in (init_x/y from
     # the scenario YAML are world coords). This is a FIXED ground-truth
     # transform (not the PF estimate), so the truth reference is independent of
-    # any filter — essential for a fair wrong-init comparison.
+    # any filter - essential for a fair wrong-init comparison.
     # Scored runs: FIXED spawn-derived static map->odom (truth reference is
-    # independent of any filter — essential for a fair wrong-init comparison).
+    # independent of any filter - essential for a fair wrong-init comparison).
     # Disabled in demo mode (truth_tf:=true), where the truth-driven node below
     # owns map->odom instead.
     map_odom_static = Node(
@@ -446,7 +446,7 @@ def generate_launch_description():
     # velocity_source /cmd_vel_in: the twin integrates COMMANDED velocity
     # (Thrun §5.3 velocity motion model) instead of the encoder. The real
     # cmd-vs-actual mismatch (accel ramps, wheel slip during pivots) then
-    # shows up as genuine, clearly visible drift — no synthetic noise.
+    # shows up as genuine, clearly visible drift - no synthetic noise.
     # /cmd_vel_in (pre-watchdog) carries only the trajectory_player script,
     # so nav2's bring-up /cmd_vel spam cannot contaminate the twin.
     ekf_dr = Node(package='pro_lab_filters', executable='ekf_node', name='ekf_dr_node',
@@ -486,7 +486,7 @@ def generate_launch_description():
     )
     # AMCL doesn't localise until it receives an /initialpose. We publish one
     # shot from the scenario YAML so AMCL starts from the same (possibly
-    # wrong) pose as the in-house filters — that's the whole comparison.
+    # wrong) pose as the in-house filters - that's the whole comparison.
     amcl_init_pose = Node(
         package='pro_lab_filters', executable='amcl_init_pose_node',
         name='amcl_init_pose',
@@ -522,7 +522,7 @@ def generate_launch_description():
             'publish_hz':    20.0,
             'topic_in':      '/cmd_vel_in',
             'topic_done':    '/trajectory/done',
-            'start_x':        0.00,    # warehouse spawn at origin — matches x_pose
+            'start_x':        0.00,    # warehouse spawn at origin - matches x_pose
             'start_y':        0.00,    # matches y_pose default
             'start_yaw':      0.00,    # face +x (east), matches yaw default
             'planned_frame': 'map',

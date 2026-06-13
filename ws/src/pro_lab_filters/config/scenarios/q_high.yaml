@@ -13,7 +13,7 @@
     init_spread_yaw: 0.05
     init_cov:        0.01
     num_particles:   500
-    # Process noise — large means "trust the measurements"
+    # Process noise - large means "trust the measurements"
     q_scale:        0.5
     motion_noise_v: 0.5
     motion_noise_w: 0.5

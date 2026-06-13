@@ -8,7 +8,7 @@
     init_x:        0.00
     init_y:        0.00
     init_yaw:      0.00      # face +x (east)
-    init_spread_xy:  0.10   # tight (10 cm) — confident
+    init_spread_xy:  0.10   # tight (10 cm) - confident
     init_spread_yaw: 0.05   # ~3°
     init_cov:        0.01   # KF/EKF P0 diagonal
     num_particles:   500

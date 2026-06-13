@@ -1,4 +1,4 @@
-// "Kidnap Robot" RViz2 tool — clone of the built-in 2D Pose Estimate that
+// "Kidnap Robot" RViz2 tool - clone of the built-in 2D Pose Estimate that
 // publishes on /kidnap_pose instead of /initialpose, so a click teleports
 // the GZ model (via robot_teleporter) without re-seeding the PF.
 //

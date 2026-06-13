@@ -1,15 +1,15 @@
 // Scripted /cmd_vel sequence player. Drives a deterministic path so every
-// filter run sees the same trajectory — a smooth S-curve (two opposite arcs)
+// filter run sees the same trajectory - a smooth S-curve (two opposite arcs)
 // followed by a tight sharp curve. Publishes to /cmd_vel_in (the watchdog
 // forwards it to /cmd_vel and zeroes after we stop). When the sequence
 // completes, /trajectory/done (Bool=true) is latched once so the orchestrator
 // (launch auto-shutdown / external runner) can react.
 //
 // Parameters:
-//   start_delay_s   double  default 12.0  — wait before first segment so
+//   start_delay_s   double  default 12.0  - wait before first segment so
 //                                            Gazebo + filters are warm
-//   loop            bool    default false — replay forever (debug)
-//   speed_scale     double  default 1.0   — multiply all v/w
+//   loop            bool    default false - replay forever (debug)
+//   speed_scale     double  default 1.0   - multiply all v/w
 //   publish_hz      double  default 20.0
 //   topic_in        string  default "/cmd_vel_in"
 //   topic_done      string  default "/trajectory/done"
@@ -42,7 +42,7 @@ struct Segment {
 // rather than open-loop on time. Reason: the gz DiffDrive plugin ramps the
 // angular rate (max_angular_acceleration = 3 rad/s²) and the wheels slip a
 // few percent during pure rotation, so "3 s × π/6 rad/s" lands at ~85°, not
-// 90° — and the north leg then visibly leans in every trajectory plot. The
+// 90° - and the north leg then visibly leans in every trajectory plot. The
 // IMU is a real onboard sensor (the filters consume it too), so feedback on
 // it stays faithful to the no-ground-truth rule. Timed segments are
 // unaffected; a pivot ends when |yaw - yaw_at_pivot_start| reaches
@@ -52,34 +52,34 @@ static bool is_pivot(const Segment& s) { return s.v == 0.0 && s.w != 0.0; }
 
 // S-curve followed by a sharp curve. The two opposite smooth arcs (the "S")
 // test how each filter tracks gentle continuous turning; the final tight,
-// high-curvature turn stresses the nonlinearity — where the linear CV KF lags
+// high-curvature turn stresses the nonlinearity - where the linear CV KF lags
 // most and the EKF/PF should win. Same path every run (deterministic).
 // Kept compact (~1.5 m extent around spawn) so it stays in the open depot
 // area and clear of shelves/landmark posts.
 // 3-point-turn path from world origin facing east (+x). Designed to expose
 // each filter's classical weaknesses in distinct phases for the paper:
-//   1. S-curve (smooth nonlinear motion)    — KF (CV) lags; EKF/PF good
-//   2. ~90° pivot left  (near in-place)     — pure-rotation stresses ALL
+//   1. S-curve (smooth nonlinear motion)    - KF (CV) lags; EKF/PF good
+//   2. ~90° pivot left  (near in-place)     - pure-rotation stresses ALL
 //                                              filters that infer ω from
 //                                              landmark deltas
 //   3. Reverse leg in the NEW heading (south, not retracing the forward
-//      curve)                               — sign flip on v, exposes
+//      curve)                               - sign flip on v, exposes
 //                                              filters that integrate
 //                                              speed naively
-//   4. ~90° pivot right (in-place)          — second rotation; recovery
-//   5. Forward in new direction             — final settle phase
+//   4. ~90° pivot right (in-place)          - second rotation; recovery
+//   5. Forward in new direction             - final settle phase
 // End pose is laterally offset from start → forward and reverse legs are
 // visually separated in the trajectory plot.
 // Pillars passed within ~1.5–3 m: (7.5, 0) throughout, plus (-7.5, 0)
 // and (7.5, -7.5) within the 10 m lidar range.
 static const std::vector<Segment> kPath = {
     {2.0,  0.50,  0.00, "approach_east"},    // 1.0 m east
-    {4.0,  0.50,  0.25, "s_curve_a"},        // S — left arc (~57° tilt, drifts N)
-    {4.0,  0.50, -0.25, "s_curve_b"},        // S — right arc, back to east
-    {3.0,  0.50,  0.00, "drive_east"},       // 1.5 m east — closes on pillar (7.5,0)
+    {4.0,  0.50,  0.25, "s_curve_a"},        // S - left arc (~57° tilt, drifts N)
+    {4.0,  0.50, -0.25, "s_curve_b"},        // S - right arc, back to east
+    {3.0,  0.50,  0.00, "drive_east"},       // 1.5 m east - closes on pillar (7.5,0)
     {3.0,  0.00,  M_PI / 6.0, "pivot_left"},  // exactly 90° in-place (3 × π/6 = π/2)
     {6.0,  0.50,  0.00,        "north_leg"},  // 3.0 m north → near pillar (7.5,+7.5)
-    {4.0, -0.50,  0.00,        "reverse_south"}, // REVERSE — 2 m south
+    {4.0, -0.50,  0.00,        "reverse_south"}, // REVERSE - 2 m south
     {3.0,  0.00, -M_PI / 6.0, "pivot_right"}, // exactly 90° in-place right
     {2.0,  0.50,  0.00, "forward_east"},     // 1.0 m east, settle
     {1.0,  0.00,  0.00, "final_stop"},
@@ -94,7 +94,7 @@ public:
     declare_parameter("publish_hz", 20.0);
     declare_parameter("topic_in",   std::string("/cmd_vel_in"));
     declare_parameter("topic_done", std::string("/trajectory/done"));
-    declare_parameter("start_x",    -8.0);   // robot spawn — used to integrate
+    declare_parameter("start_x",    -8.0);   // robot spawn - used to integrate
     declare_parameter("start_y",    -0.5);   //   kPath into a world-frame /planned_path
     declare_parameter("start_yaw",   0.0);   //   that RViz can display.
     declare_parameter("planned_frame", std::string("map"));
@@ -132,7 +132,7 @@ public:
         get_parameter("start_yaw").as_double(),
         get_parameter("planned_frame").as_string());
 
-    // t_start_ is captured on the first tick that sees a valid sim clock —
+    // t_start_ is captured on the first tick that sees a valid sim clock -
     // NOT here. With use_sim_time the constructor often runs before /clock
     // arrives (this->now() == 0); if a gz server from a previous run is still
     // publishing a high sim time, now-t_start_ jumps to hundreds of seconds and
@@ -181,7 +181,7 @@ private:
     // Stateful segment machine: seg_idx_ advances when the current segment
     // finishes. Timed segments finish after duration_s; pivot segments
     // (v==0, w!=0) finish when the IMU yaw delta reaches the intended angle
-    // |w|·duration_s — robust against DiffDrive accel ramps + wheel slip
+    // |w|·duration_s - robust against DiffDrive accel ramps + wheel slip
     // that make open-loop pivots undershoot by ~5°.
     if (seg_idx_ >= kPath.size()) {
       finishOrLoop(now);

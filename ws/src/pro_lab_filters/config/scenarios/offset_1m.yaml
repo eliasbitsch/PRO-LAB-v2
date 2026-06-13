@@ -6,7 +6,7 @@
     init_x:        1.00       # truth + 1.0 m
     init_y:        0.00
     init_yaw:      0.00
-    init_spread_xy:  0.50     # half a metre — covers the 1 m bias loosely
+    init_spread_xy:  0.50     # half a metre - covers the 1 m bias loosely
     init_spread_yaw: 0.10
     init_cov:        0.25     # KF/EKF P0 (matches sigma=0.5)
     num_particles:   500

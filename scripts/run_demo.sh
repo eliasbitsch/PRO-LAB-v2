@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# LIVE DEMO — "Landmarks are king": kidnap + manual recovery in RViz.
+# LIVE DEMO - "Landmarks are king": kidnap + manual recovery in RViz.
 # ─────────────────────────────────────────────────────────────────────────────
 # Launches the full stack in MANUAL mode (no scripted trajectory): Gazebo GUI +
 # RViz + all four research filters (KF, EKF, EKF-LF, PF) + the Nav2 AMCL
@@ -19,14 +19,14 @@
 #   1. DRIVE:    use the "Teleop" panel in RViz (or teleop_twist_keyboard on
 #                /cmd_vel_in). All filters track the robot.
 #   2. KIDNAP:   pick the "Kidnap" tool in the RViz toolbar and click+drag an
-#                arrow somewhere on the map — the robot teleports there. The
+#                arrow somewhere on the map - the robot teleports there. The
 #                belief of every filter is now wrong.
 #   3. RECOVER (landmarks are king): just keep driving. As soon as the camera
 #                reads an AprilTag at the new location, KF and EKF snap back to
-#                the truth on their own — no human help needed.
+#                the truth on their own - no human help needed.
 #   4. SCAN FILTERS NEED HELP: PF and AMCL stay lost in the symmetric warehouse
 #                (perceptual aliasing). Give them a good initial guess with the
-#                "2D Pose Estimate" tool (publishes /initialpose) — both re-seed
+#                "2D Pose Estimate" tool (publishes /initialpose) - both re-seed
 #                and converge. This is the textbook "particle filters need a
 #                reasonable initial belief" point, shown live.
 #
@@ -40,7 +40,7 @@ SCENARIO=${SCENARIO:-correct_init}   # start correctly localized, then kidnap by
 DISPLAY_ENV=${DISPLAY:-:1}
 
 echo "── allowing local X connections for the container ──"
-xhost +local: >/dev/null 2>&1 || echo "  (xhost not available — windows may not open)"
+xhost +local: >/dev/null 2>&1 || echo "  (xhost not available - windows may not open)"
 
 echo "── clean container restart (no stale nodes) ──"
 docker restart "$CONTAINER" >/dev/null 2>&1

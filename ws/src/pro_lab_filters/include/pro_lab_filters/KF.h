@@ -1,7 +1,7 @@
 #pragma once
 // Linear Kalman Filter (pure, no ROS).
 //
-// Notation follows Thrun, Burgard, Fox — Probabilistic Robotics §3.2:
+// Notation follows Thrun, Burgard, Fox - Probabilistic Robotics §3.2:
 //   x_t = A_t · x_{t-1} + B_t · u_t + ε_t       (motion model)
 //   z_t = C_t · x_t + δ_t                        (measurement model)
 //   R_t = process noise covariance               (≠ R from aerospace!)
@@ -13,17 +13,17 @@
 // A linear KF requires both the predict and every measurement model to be of
 // the form A·x + B·u + w (no products of state variables, no trig). The
 // 3D unicycle predict x' = x + v·cos(yaw)·dt is non-linear in yaw, which
-// would force a Jacobian linearisation — at which point you're not a KF
+// would force a Jacobian linearisation - at which point you're not a KF
 // anymore, you're an EKF.
 //
 // By promoting the velocities into the state (constant-velocity model in
 // world frame), the predict becomes a pure linear transformation:
 //
 //        ⎡I  Δt·I⎤
-//   A  = ⎢       ⎥          (no B_t — no /cmd_vel control input)
+//   A  = ⎢       ⎥          (no B_t - no /cmd_vel control input)
 //        ⎣0   I  ⎦
 //
-// No /cmd_vel control input is consumed — body-frame velocity → world-frame
+// No /cmd_vel control input is consumed - body-frame velocity → world-frame
 // velocity would itself be non-linear in yaw. The filter learns vx/vy/omega
 // passively from sequential position/yaw measurements; the process noise on
 // the velocity block absorbs the unmodelled accelerations.
@@ -57,7 +57,7 @@ public:
     x_ = x0; P_ = Sigma0; R_ = R_proc;
   }
 
-  // Constant-velocity predict — fully linear.
+  // Constant-velocity predict - fully linear.
   // x_t = A_t · x_{t-1}      Σ_t = A_t · Σ_{t-1} · A_tᵀ + R_t
   void predict(double dt) {
     Mat6 A = Mat6::Identity();
@@ -96,8 +96,8 @@ public:
 
   // 3D velocity measurement [vx, vy, omega] from wheel odometry. The encoder
   // forward speed v and yaw rate ω are a real sensor; the body→world rotation
-  // (vx=v·cosψ, vy=v·sinψ) is done in the node with the current yaw estimate —
-  // the same linearise-outside-the-filter trick the landmark update uses — so
+  // (vx=v·cosψ, vy=v·sinψ) is done in the node with the current yaw estimate -
+  // the same linearise-outside-the-filter trick the landmark update uses - so
   // C stays constant and the filter stays linear. Without this anchor the CV
   // model infers velocity only from noisy position differences and coasts away
   // (a stopped robot would keep "drifting" at a bogus estimated velocity).

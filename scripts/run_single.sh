@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run ONE experiment in the prolab_jazzy container with RViz visible.
 # Cleans up stale processes first, then launches inside the container.
-# Use this for interactive debugging — for the full statistical sweep
+# Use this for interactive debugging - for the full statistical sweep
 # use scripts/run_experiments.sh instead.
 #
 # Usage:
@@ -15,7 +15,7 @@
 # Filters:
 #   kf      | ekf      | ekf_lf  | pf  | all (default: kf)
 #
-# After Ctrl+C, run this script again to relaunch — it cleans up by itself.
+# After Ctrl+C, run this script again to relaunch - it cleans up by itself.
 set -uo pipefail
 
 FILTER="kf"
@@ -59,7 +59,7 @@ if ! docker ps --format '{{.Names}}' | grep -q '^prolab_jazzy$'; then
   exit 1
 fi
 
-# Cleanup helper — kills everything ros/gz/rviz spawns inside the container.
+# Cleanup helper - kills everything ros/gz/rviz spawns inside the container.
 # Idempotent, safe to call multiple times.
 cleanup_container() {
   docker exec prolab_jazzy bash -c '

@@ -2,7 +2,7 @@
 // "Please set the initial pose..." state and start particle filtering.
 //
 // Reads the same scenario init params (init_x/y/yaw/cov) the other filters
-// consume, so AMCL starts from the SAME (possibly wrong) pose as KF/EKF/PF —
+// consume, so AMCL starts from the SAME (possibly wrong) pose as KF/EKF/PF -
 // the whole point of the wrong-init study.
 //
 // C++ port of amcl_init_pose.py. Scheduling is done by polling the (sim) clock
@@ -32,7 +32,7 @@ public:
     period_s_ = declare_parameter<double>("period_s", 2.0);
     attempts_ = static_cast<int>(declare_parameter<int>("attempts", 6));
 
-    // AMCL's /initialpose subscription is TRANSIENT_LOCAL — default VOLATILE
+    // AMCL's /initialpose subscription is TRANSIENT_LOCAL - default VOLATILE
     // triggers "incompatible QoS, no messages will be sent".
     rclcpp::QoS qos(1);
     qos.reliable().transient_local().keep_last(1);

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Provision the prolab_jazzy container for the AprilTag landmark pipeline.
 # These changes live OUTSIDE the mounted workspace (system ROS share + pip
-# site-packages), so they are lost on an image rebuild — re-run this script
+# site-packages), so they are lost on an image rebuild - re-run this script
 # after recreating the container. Idempotent: safe to run repeatedly.
 #
 # Run as ROOT inside the container:
@@ -12,7 +12,7 @@
 #      commented out: "<!-- rgbd_camera disabled -->") at 1280x720 so AprilTag
 #      36h11 markers stay readable across the ~7.5 m warehouse aisles.
 #   2. Installs libapriltag-dev (the dedicated AprilTag-3 detector C library,
-#      linked by apriltag_landmark_detector_node — a BUILD dependency, must be
+#      linked by apriltag_landmark_detector_node - a BUILD dependency, must be
 #      present before colcon build).
 set -u
 
@@ -24,7 +24,7 @@ import sys, shutil, os
 f = sys.argv[1]
 s = open(f).read()
 if 'type="rgbd_camera"' in s:
-    print("[provision]   camera already enabled — skipping")
+    print("[provision]   camera already enabled - skipping")
     sys.exit(0)
 old = "    <!-- rgbd_camera disabled -->\n"
 new = """    <!-- rgbd_camera RE-ENABLED for ArUco/AprilTag landmark detection.
@@ -54,7 +54,7 @@ PY
 
 echo "[provision] 2/2 installing libapriltag-dev (AprilTag-3 C library)"
 if [ -f /usr/include/apriltag/apriltag.h ]; then
-    echo "[provision]   libapriltag-dev already installed — skipping"
+    echo "[provision]   libapriltag-dev already installed - skipping"
 else
     apt-get install -y libapriltag-dev
 fi

@@ -1,7 +1,7 @@
-# PRO-Lab — Evaluation Overview
+# PRO-Lab - Evaluation Overview
 
 *What exactly is being evaluated: filters, sensor inputs, metrics, conditions.*
-Task ID **2510331021 — Wrong Initialization** (initialise the filter with an
+Task ID **2510331021 - Wrong Initialization** (initialise the filter with an
 incorrect starting pose / uncertainty and compare recovery).
 
 ---
@@ -17,7 +17,7 @@ trajectory, so differences come only from the estimator (and its init error).
 | **EKF**    | `[x, y, yaw]` | 3D | `/cmd_vel`, `/imu`, `/landmarks` | non-linear unicycle predict; range/bearing landmark update via Jacobian | `odom` |
 | **EKF-LF** | `[x, y, yaw]` | 3D | `/cmd_vel`, `/imu`, `/scan`, `/map` | EKF with **direct scan-likelihood** update (linearised around current pose) | `map` |
 | **PF**     | `[x, y, yaw]` | 3D | `/cmd_vel`, `/imu`, `/scan`, `/map` | augmented MCL particle filter + likelihood-field scan; non-linear / non-Gaussian | `map` |
-| **AMCL**   | Nav2 internal | — | Nav2 internal | gold-standard **baseline** (Nav2). No filter consumes it — logged alongside for "our filters vs Nav2" | `map` |
+| **AMCL**   | Nav2 internal | - | Nav2 internal | gold-standard **baseline** (Nav2). No filter consumes it - logged alongside for "our filters vs Nav2" | `map` |
 
 KF uses different (higher) state dimension on purpose: promoting velocities
 into the state keeps `F` a constant linear matrix, so it stays a *true* KF
@@ -30,7 +30,7 @@ instead of degrading into an EKF.
 | Topic | Source | Used by | Notes |
 |---|---|---|---|
 | `/imu` | gz IMU (bridged) | KF, EKF, EKF-LF, PF | orientation yaw + `angular_velocity.z` (gyro) |
-| `/odom` | gz wheel odometry (bridged) | — / PF motion | dead-reckoning |
+| `/odom` | gz wheel odometry (bridged) | - / PF motion | dead-reckoning |
 | `/scan` | gz 2D lidar (bridged) | EKF-LF, PF | likelihood-field against `/map` |
 | `/cmd_vel` | scripted `trajectory_player` | EKF, EKF-LF, PF (control input) | bridged ROS→gz to actually move the robot |
 | `/landmarks/observations` | `landmark_detector_node` | KF, EKF | **self-defined** landmarks: 3 posts at `(-5,2)`, `(3,-2)`, `(-2,-6)`; noisy range/bearing (σ_range = 0.10 m, σ_bearing = 0.05 rad, max_range = 6 m, 5 Hz) |
@@ -47,8 +47,8 @@ instead of degrading into an EKF.
 | `rmse_xy`, `rmse_yaw` | running RMSE up to time *t* |
 | `converged` | `true` once `error_xy < 0.20 m` for ≥ 2 s continuously |
 | `time_to_converge` | seconds until first convergence |
-| `nees` | Normalized Estimation Error Squared — χ² consistency; mean ≈ state dim when well-calibrated, ≫ → overconfident |
-| `pf_ess` | PF effective sample size (`1 / Σ wᵢ²`) — collapses under degeneracy |
+| `nees` | Normalized Estimation Error Squared - χ² consistency; mean ≈ state dim when well-calibrated, ≫ → overconfident |
+| `pf_ess` | PF effective sample size (`1 / Σ wᵢ²`) - collapses under degeneracy |
 | `runtime_us` | per-tick wall-clock cost (real-time / performance comparison) |
 
 ---
@@ -67,11 +67,11 @@ instead of degrading into an EKF.
   `underconfident`, `kidnapped`).
 
 ### Mandatory experiments (assignment)
-- **Q** (process-noise) variation — model confidence
-- **R** (measurement-noise) variation — sensor trust
-- **Runtime / performance** — computational cost, real-time capability
-- **Ground-truth evaluation** — RMSE vs truth
-- **Landmark detection** — self-defined landmarks (above)
+- **Q** (process-noise) variation - model confidence
+- **R** (measurement-noise) variation - sensor trust
+- **Runtime / performance** - computational cost, real-time capability
+- **Ground-truth evaluation** - RMSE vs truth
+- **Landmark detection** - self-defined landmarks (above)
 
 ---
 

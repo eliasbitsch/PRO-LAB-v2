@@ -19,7 +19,7 @@
 //                                         covariance. χ²-consistent filter
 //                                         tracks the state-dim mean (≈3 here).
 //                                         A persistent NEES >> 3 means the
-//                                         filter is overconfident — the
+//                                         filter is overconfident - the
 //                                         classic wrong-init failure mode.
 //
 // Parameters:
@@ -157,7 +157,7 @@ private:
 
     // NEES = e^T · P^-1 · e over (x, y, yaw). The PoseWithCovariance cov is a
     // 6×6 row-major buffer for [x, y, z, roll, pitch, yaw]; we lift the
-    // (0,1,5) sub-block. If P is singular or zero we publish NaN — that's
+    // (0,1,5) sub-block. If P is singular or zero we publish NaN - that's
     // also diagnostic ("filter forgot to publish covariance").
     Eigen::Matrix3d P;
     auto Cij = [&](int i, int j) { return msg.pose.covariance[i * 6 + j]; };
@@ -172,7 +172,7 @@ private:
     }
     pub_d(fs.nees_pub, nees);
 
-    // convergence detection — error_xy under threshold for window_s seconds
+    // convergence detection - error_xy under threshold for window_s seconds
     if (!fs.converged) {
       fs.history.emplace_back(t, err_xy);
       while (!fs.history.empty() && t - fs.history.front().first > conv_window_) {

@@ -12,16 +12,16 @@
 //      it out, and the running RMSE never recovered. /odom has wheels=0
 //      during warmup, so no spurious motion is integrated.
 //
-// State: [x, y, yaw]   (3D — v, omega enter as control inputs, not state)
+// State: [x, y, yaw]   (3D - v, omega enter as control inputs, not state)
 //
-// Why 3D — paired with the 6D KF on purpose:
+// Why 3D - paired with the 6D KF on purpose:
 //   The EKF DOES linearise. At every predict step it forms the Jacobian
 //       F = ∂f/∂x = | 1  0  -v·sin(yaw)·dt |
 //                   | 0  1   v·cos(yaw)·dt |
 //                   | 0  0          1      |
 //   evaluated at the current estimate, which is a 1st-order Taylor expansion
 //   of the natural (nonlinear) Unicycle model around x̂_k. Because the model
-//   is allowed to be nonlinear, v and omega stay as control inputs — they do
+//   is allowed to be nonlinear, v and omega stay as control inputs - they do
 //   NOT have to live in the state. Hence n=3 vs. the KF's n=6 (which has to
 //   carry vx/vy/omega in state to keep the model linear). Per-tick matrix
 //   work scales with n^3, so the EKF's predict (3^3=27 flops) is empirically
@@ -66,15 +66,15 @@ public:
     // Dead-reckoning twin support: with both flags false this node becomes a
     // pure odometry integrator (predict-only). Used as `ekf_dr` in the launch
     // to produce the lecture-style "odometry drift + growing uncertainty"
-    // baseline for the explainer plots — real integration, not a mock-up.
+    // baseline for the explainer plots - real integration, not a mock-up.
     declare_parameter("use_imu",       true);
     declare_parameter("use_landmarks", true);
     declare_parameter("topic_prefix",  std::string("/ekf"));
     // Velocity source for the predict step:
-    //   "odom"            — measured wheel-encoder velocity (Thrun §5.4,
+    //   "odom"            - measured wheel-encoder velocity (Thrun §5.4,
     //                       odometry motion model). Default; all comparison
     //                       filters use this.
-    //   any other string  — treated as a Twist topic carrying COMMANDED
+    //   any other string  - treated as a Twist topic carrying COMMANDED
     //                       velocity (Thrun §5.3, velocity motion model).
     //                       Used by the ekf_dr twin with "/cmd_vel_in":
     //                       integrating the command instead of the encoder

@@ -14,7 +14,7 @@
 #
 # Without --headless, RViz comes up so you can watch a run live. Gazebo is
 # always headless inside the container (gz sim -s). Each run starts gz fresh
-# (start_gz:=true) — collisions if we left the previous one alive.
+# (start_gz:=true) - collisions if we left the previous one alive.
 #
 # Stack expectation: docker compose has prolab_jazzy up. start_all.sh is not
 # required; this script tears down between runs and starts everything itself.
@@ -46,7 +46,7 @@ c_red()  { printf '\033[31m%s\033[0m\n' "$*" >&2; }
 
 # Pre-create ./results on host so docker doesn't auto-create it as root.
 # Image is built with the host user's UID/GID (see docker/Dockerfile +
-# docker/.env), so the container writes here as the host user — no chmod.
+# docker/.env), so the container writes here as the host user - no chmod.
 HOST_RESULTS_DIR="$(cd "$(dirname "$0")/.." && pwd)/results"
 mkdir -p "$HOST_RESULTS_DIR"
 
@@ -112,7 +112,7 @@ for s in $SCENARIOS; do
         use_trajectory:=true \
         out_dir:=$OUT_DIR \
         > /tmp/exp_${s}_seed${seed}.log 2>&1
-    " || c_red "  run failed — see /tmp/exp_${s}_seed${seed}.log inside container"
+    " || c_red "  run failed - see /tmp/exp_${s}_seed${seed}.log inside container"
   done
 done
 

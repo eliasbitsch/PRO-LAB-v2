@@ -43,7 +43,7 @@ QColor stopColor(bool pressed) {
 // (so the gap looks uniform from inner to outer). To do this, the gap's
 // half-angle differs at inner vs outer radius: for a target pixel gap g,
 // the half-angle at radius r is g/(2r) rad. The radial-ish sides of the
-// wedge then aren't perfectly radial — they're a chord between the inner
+// wedge then aren't perfectly radial - they're a chord between the inner
 // and outer arc endpoints, which is what makes the gap appear parallel.
 QPainterPath wedgePath(QPointF c, double r_in, double r_out,
                        int center_deg, int span_deg) {
@@ -146,7 +146,7 @@ void TeleopPad::paintEvent(QPaintEvent *) {
   };
 
   // Draw triangular arrow glyphs ourselves so they sit pixel-perfect at
-  // the wedge centre — Qt's ▲/▼ font glyphs have asymmetric metrics that
+  // the wedge centre - Qt's ▲/▼ font glyphs have asymmetric metrics that
   // make AlignCenter look slightly off, especially for ■.
   const double rmid    = (r_in + r_out) / 2.0;
   const double tri_h   = s * 0.08;     // arrow size
@@ -207,7 +207,7 @@ TeleopPanel::~TeleopPanel() {
 }
 
 void TeleopPanel::onInitialize() {
-  // Self-owned rclcpp node — borrowing RViz's shared node via
+  // Self-owned rclcpp node - borrowing RViz's shared node via
   // getRosNodeAbstraction() races with RViz init on some Jazzy builds and
   // silently leaves the publisher unbound. A private node is reliable and
   // publishers don't need a running executor to send messages.
@@ -229,7 +229,7 @@ void TeleopPanel::onInitialize() {
 }
 
 namespace {
-// Skip the global key filter when the user is typing into a text input —
+// Skip the global key filter when the user is typing into a text input -
 // otherwise arrow keys would steal focus from line edits / spin boxes /
 // combos in RViz config dialogs.
 bool focusIsTextInput() {
@@ -255,7 +255,7 @@ bool TeleopPanel::eventFilter(QObject * /*obj*/, QEvent * ev) {
     return false;
   }
   auto * ke = static_cast<QKeyEvent *>(ev);
-  // Auto-repeat fires KeyPress over and over while holding — we already
+  // Auto-repeat fires KeyPress over and over while holding - we already
   // set the sector on the first press, so swallow the rest silently
   // (returning false lets RViz still see them, which is fine).
   if (ke->isAutoRepeat()) {

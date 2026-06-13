@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Headless LaTeX compile via Docker TeXLive — no local TeX install needed.
+# Headless LaTeX compile via Docker TeXLive - no local TeX install needed.
 # Usage: ./build.sh [main-tex-basename]   (default: ProbRobPaperTemplateWS2022)
 set -euo pipefail
 MAIN="${1:-ProbRobPaperTemplateWS2022}"

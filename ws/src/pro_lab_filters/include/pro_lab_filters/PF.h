@@ -66,7 +66,7 @@ public:
   //   v_noise² = α1·v² + α2·w²
   //   w_noise² = α3·v² + α4·w²
   //   γ_noise² = α5·v² + α6·w²       (final yaw "drift", separate from w)
-  // This makes the cloud spread proportionally to commanded motion — the
+  // This makes the cloud spread proportionally to commanded motion - the
   // robot is more uncertain about a fast turn than about creeping forward.
   void predict(double v, double w, double dt) {
     if (use_alphas_) {
@@ -160,7 +160,7 @@ public:
   // Likelihood-field scan update (Probabilistic Robotics §6.4 / §8.3.5).
   //
   // beams_local: subsampled 2D ray endpoints expressed in the *robot*
-  //   (base) frame — i.e. lidar TF already applied. Empty / max-range /
+  //   (base) frame - i.e. lidar TF already applied. Empty / max-range /
   //   too-short beams should be filtered out by the caller.
   // sigma_hit:  metres. Std-dev of the gaussian on distance-to-obstacle.
   //             Typical 0.1–0.3 m for an indoor lidar.
@@ -182,7 +182,7 @@ public:
     // beam_skip_error_threshold). For each beam, compute the fraction of
     // particles whose endpoint sits within `beam_skip_dist_` of an obstacle.
     // Beams that almost no particle accepts are likely from a dynamic
-    // obstacle (person walking, moved chair) and get dropped — *unless*
+    // obstacle (person walking, moved chair) and get dropped - *unless*
     // most beams look bad, in which case the robot really is in a novel
     // place and we should trust the scan.
     std::vector<bool> use_beam(M, true);
@@ -210,7 +210,7 @@ public:
         }
       }
       // If >beam_skip_error_thresh fraction would be skipped, scan is
-      // probably novel (e.g. just after a kidnap) — keep all beams.
+      // probably novel (e.g. just after a kidnap) - keep all beams.
       if (static_cast<double>(skipped) / M > beam_skip_err_thresh_) {
         std::fill(use_beam.begin(), use_beam.end(), true);
       }
@@ -256,7 +256,7 @@ public:
       sum += weights_[i];
     }
 
-    // Augmented-MCL random-particle injection — OPT-IN (kidnap recovery only).
+    // Augmented-MCL random-particle injection - OPT-IN (kidnap recovery only).
     // It tracks the short/long-term average per-beam geometric-mean likelihood
     // and injects uniform particles across the whole map when the scan stops
     // matching. Disabled by default: during normal driving the likelihood
@@ -346,7 +346,7 @@ public:
     alpha_fast_ = alpha_fast;
   }
   // Enable random-particle injection for global/kidnap recovery. OFF by
-  // default — see updateScan(): on during normal motion it scatters particles
+  // default - see updateScan(): on during normal motion it scatters particles
   // across the map and the estimate diverges.
   void enableAugmentedMcl(bool on) { aug_mcl_enabled_ = on; }
   double injectProbability() const { return inject_prob_; }
@@ -359,7 +359,7 @@ public:
     beam_skip_err_thresh_ = err_thresh;
   }
 
-  // KLD bounds — particle count adapts within [n_min, n_max].
+  // KLD bounds - particle count adapts within [n_min, n_max].
   // epsilon: max allowed K–L error (typical 0.05)
   // z: 1-δ quantile of standard normal (δ=0.01 → z ≈ 2.33)
   // bin_xy / bin_yaw: histogram bin sizes for "did we cover this region"
@@ -402,7 +402,7 @@ private:
     // likelihood is below long-term avg → resample anyway, so the
     // injection step actually runs and the filter can recover.
     // Threshold 0.02: in our pillar-grid warehouse the scan likelihood
-    // only drops mildly after a kidnap (translational aliasing — a pose
+    // only drops mildly after a kidnap (translational aliasing - a pose
     // shifted by the 7.5 m grid period explains the scan almost equally
     // well), so inject_prob rarely exceeds ~0.05. Trigger early and let
     // the injected particles + IMU yaw + landmark-free scan evidence
@@ -423,7 +423,7 @@ private:
     } else {
       resampleFixed(U, Ux, Uy, Uyaw);
     }
-    // Don't zero w_slow_/w_fast_ here — that would prevent the running
+    // Don't zero w_slow_/w_fast_ here - that would prevent the running
     // averages from ever diverging enough for inject_prob_ to grow.
   }
 

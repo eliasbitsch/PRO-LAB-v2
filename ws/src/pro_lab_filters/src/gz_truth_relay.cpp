@@ -3,7 +3,7 @@
 // Why: the bridge converts gz.msgs.Pose_V to tf2_msgs/TFMessage and DROPS
 // the entity name in the process, so we can't filter for the robot. The
 // dynamic_pose/info topic lists every moving entity (chairs, robot, …),
-// and the robot is not reliably first in the list — picking by index gave
+// and the robot is not reliably first in the list - picking by index gave
 // us a chair pose as "truth", which made the kidnapped scenario unusable.
 //
 // This node subscribes to /world/<world>/dynamic_pose/info via gz transport,

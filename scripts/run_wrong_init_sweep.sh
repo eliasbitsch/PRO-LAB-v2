@@ -2,7 +2,7 @@
 # Serial 10-seed x 7-scenario sweep for the wrong-init study (AprilTag pipeline).
 #
 # Runs on the HOST (orchestrates the container) because the only RELIABLE reset
-# between runs is `docker restart` — pkill -f ros2 leaves the spawned node
+# between runs is `docker restart` - pkill -f ros2 leaves the spawned node
 # processes (ekf_node, apriltag_landmark_detector_node, ...) alive, and stacked
 # launch generations corrupt the next run (/clock chaos, "moved backwards in
 # time", duplicated nodes). Restarting the container is the only thing that

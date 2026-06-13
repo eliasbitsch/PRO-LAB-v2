@@ -1,6 +1,6 @@
 # Wrong heading: init yaw is rotated by +pi/2 from truth.
 # Linearised filters (KF/EKF) handle this poorly because the motion model is
-# nonlinear in yaw — interesting comparison vs PF which represents arbitrary
+# nonlinear in yaw - interesting comparison vs PF which represents arbitrary
 # yaw distributions.
 # Truth spawn: (0.0, 0.0, yaw=0). Position is correct, only yaw is wrong.
 /**:

@@ -8,7 +8,7 @@
 //      Gazebo, picks the Transform whose child_frame_id matches `model_name`
 //      (default "turtlebot4"), and publishes that pose directly.
 //      This is the SIMULATOR'S OWN ground truth, completely independent of
-//      AMCL — the kidnapped scenario needs this because the previous
+//      AMCL - the kidnapped scenario needs this because the previous
 //      target=map mode reads the AMCL-published map->odom transform, which
 //      flails during global localisation and made the truth jump wildly.
 //
@@ -16,7 +16,7 @@
 //      "odom" -> "base_footprint", works for any tb4 spawn).
 //
 // Parameters:
-//   gz_pose_topic   default ""  — empty disables mode 1 and falls back to TF
+//   gz_pose_topic   default ""  - empty disables mode 1 and falls back to TF
 //   model_name      default "turtlebot4"
 //   target_frame    default "odom"   (mode 2 only)
 //   source_frame    default "base_footprint"  (mode 2 only)
@@ -116,7 +116,7 @@ private:
   void on_gz_pose(const tf2_msgs::msg::TFMessage& m) {
     // The ros_gz_bridge drops the entity name when converting Pose_V to
     // TFMessage (child_frame_id arrives as ""). So we cannot match by name
-    // — we either use a dynamic_pose topic (only moving entities, robot
+    // - we either use a dynamic_pose topic (only moving entities, robot
     // is reliably the first) or we accept ANY transform if model_name
     // is empty. If model_name is set AND we find a non-empty
     // child_frame_id match we still prefer that.
@@ -136,7 +136,7 @@ private:
     if (match == nullptr) return;
 
     geometry_msgs::msg::PoseStamped p;
-    // dynamic_pose stamps arrive as 0/0 from the bridge — stamp with
+    // dynamic_pose stamps arrive as 0/0 from the bridge - stamp with
     // current sim time instead so downstream consumers (metrics, csv_logger)
     // can compute deltas.
     p.header.stamp = now();

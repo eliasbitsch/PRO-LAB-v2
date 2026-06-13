@@ -12,7 +12,7 @@
 //     map_T_odom  =  map_T_base * inv(odom_T_base)
 //
 // We subscribe to a PoseWithCovarianceStamped in the "map" frame (the
-// chosen filter — KF / EKF / PF — selectable via param) and to the
+// chosen filter - KF / EKF / PF - selectable via param) and to the
 // current TF tree, and broadcast the resulting "map -> odom" transform.
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>

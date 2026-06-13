@@ -12,7 +12,7 @@
     init_spread_yaw: 0.05
     init_cov:        0.01
     num_particles:   500
-    # Measurement noise — small R means "trust the sensors"
+    # Measurement noise - small R means "trust the sensors"
     r_yaw_imu:  0.005
     r_pose_xy:  0.005
     r_pose_yaw: 0.005

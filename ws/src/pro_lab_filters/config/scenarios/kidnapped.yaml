@@ -1,6 +1,6 @@
 # "Kidnapped robot": no a-priori pose. PF starts with particles UNIFORMLY
 # spread across the whole warehouse map (≈30 m × 20 m). KF/EKF cannot do
-# global localisation — they get a Gaussian centred at the map mid-point with
+# global localisation - they get a Gaussian centred at the map mid-point with
 # a huge covariance, which is mostly a fairness placeholder.
 # Truth spawn: (-8.0, -0.5, yaw=0).
 /**:
@@ -21,7 +21,7 @@
 
     # Augmented MCL (Thrun §8.3.3, Table 8.3): track the short-/long-term
     # average scan likelihood (w_fast / w_slow) and inject uniform random
-    # particles when the scan stops matching the belief — the textbook
+    # particles when the scan stops matching the belief - the textbook
     # recovery for exactly this scenario. Plain MCL structurally cannot
     # recover (all hypotheses sit at the old pose; resampling cannot invent
     # new locations). Enabled ONLY here: during normal driving the injection
@@ -29,11 +29,11 @@
     use_augmented_mcl: true
 
     # Auto-kidnap schedule (stride 4: t_s, x, y, yaw). Reproducible kidnap
-    # events for headless batches — replaces the RViz Kidnap tool.
+    # events for headless batches - replaces the RViz Kidnap tool.
     # Times are seconds after the scripted motion starts (start_delay_s in
     # auto_kidnapper). Pick targets inside the open warehouse area, not
     # inside shelves/pillars (those would collide on respawn).
-    #   t=18 s → warp to (4.0, -3.0, 0)   — south aisle, near landmark row -0
-    #   t=28 s → warp to (-4.0, 5.0, π)  — north-west, facing west (180°)
+    #   t=18 s → warp to (4.0, -3.0, 0)   - south aisle, near landmark row -0
+    #   t=28 s → warp to (-4.0, 5.0, π)  - north-west, facing west (180°)
     kidnap_schedule: [18.0,  4.0, -3.0,  0.0,
                       28.0, -4.0,  5.0,  3.14159]

@@ -1,4 +1,4 @@
-// AprilTag landmark detector (C++) — the REAL, honest data-association channel.
+// AprilTag landmark detector (C++) - the REAL, honest data-association channel.
 //
 // The robot reads marker IDs straight off the warehouse pillars with its OAK-D
 // camera (no ground-truth leak). Per image:
@@ -6,12 +6,12 @@
 //      with the camera intrinsics + physical tag size, estimates its pose in the
 //      camera optical frame (estimate_tag_pose).
 //   2. The tag translation is transformed into the robot base frame (static
-//      camera TF) and reduced to (range, bearing) — the measurement the
+//      camera TF) and reduced to (range, bearing) - the measurement the
 //      landmark-based KF/EKF consume.
 //   3. Published as Float32MultiArray [id, range, bearing, ...] on obs_topic,
 //      the SAME format the old detector used → filters need no change.
 //
-// Ground truth is used ONLY to publish a validation error (err_topic) — never to
+// Ground truth is used ONLY to publish a validation error (err_topic) - never to
 // label or associate a detection. landmark_* is the a-priori known marker map,
 // used only to look up the true range/bearing for that error.
 //
@@ -47,7 +47,7 @@ extern "C" {
 #include "tag36h11.h"
 }
 // NOTE: tag pose comes from OpenCV solvePnP on the detected corners, NOT
-// libapriltag's estimate_tag_pose() — Debian's libapriltag does not export the
+// libapriltag's estimate_tag_pose() - Debian's libapriltag does not export the
 // matd_* helpers needed to read its apriltag_pose_t, so we use the corners
 // (det->p, plain struct data) + the known tag size with cv::solvePnP instead.
 

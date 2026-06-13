@@ -1,7 +1,7 @@
 # ros_gz_bridge config: maps gz transport topics <-> ROS2 topics.
 # gz sim runs headless inside the same container as ROS.
 
-# /clock intentionally NOT bridged here — spawn_tb4.launch.py's bridge
+# /clock intentionally NOT bridged here - spawn_tb4.launch.py's bridge
 # (config: tb4_bridge.yaml) already does it. Multiple bridges publishing
 # /clock cause sim_time jumps that confuse TF buffers (map flicker).
 
@@ -54,7 +54,7 @@
 
 # dynamic_pose only carries moving entities (the robot), not the whole
 # warehouse static scene. Used by truth_relay because the bridge drops
-# entity names when converting Pose_V to TFMessage — taking the first
+# entity names when converting Pose_V to TFMessage - taking the first
 # transform from dynamic_pose gives us the robot deterministically.
 - ros_topic_name: "/world/warehouse/dynamic_pose/info"
   gz_topic_name: "/world/warehouse/dynamic_pose/info"

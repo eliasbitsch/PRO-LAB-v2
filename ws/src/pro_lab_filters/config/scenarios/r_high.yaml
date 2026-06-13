@@ -13,7 +13,7 @@
     init_spread_yaw: 0.05
     init_cov:        0.01
     num_particles:   500
-    # Measurement noise — large R means "ignore sensor wiggles"
+    # Measurement noise - large R means "ignore sensor wiggles"
     r_yaw_imu:  1.0
     r_pose_xy:  1.0
     r_pose_yaw: 1.0
