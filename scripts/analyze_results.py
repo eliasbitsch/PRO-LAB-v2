@@ -91,6 +91,15 @@ def _break_jumps(xs, ys, jump_threshold=0.5):
     return xs, ys
 
 
+def _legend_right(ax, **kw):
+    """Place the legend OUTSIDE the axes (upper-right) so it never covers the
+    data. savefig is configured with bbox='tight', so the outside legend is
+    still captured in the saved figure."""
+    kw.setdefault("fontsize", 10)
+    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0.0,
+              frameon=True, framealpha=0.95, **kw)
+
+
 def _jump_indices(xs, ys, jump_threshold=0.5, min_gap_ticks=20):
     """Return the indices where step length > threshold (kidnap event onsets).
 
@@ -418,7 +427,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
         plot_band(ax, t, stk, COLOURS.get(f, "k"), f.upper())
     ax.set_xlabel("time [s]"); ax.set_ylabel("xy error [m]")
     ax.set_title(f"{scenario} — xy error (mean ± 1σ over {len(paths)} seeds)")
-    ax.legend(); ax.grid(alpha=0.3)
+    _legend_right(ax); ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(out / f"{scenario}_error_xy.{fmt}"); plt.close(fig)
 
@@ -429,7 +438,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
         plot_band(ax, t, stk, COLOURS.get(f, "k"), f.upper())
     ax.set_xlabel("time [s]"); ax.set_ylabel("yaw error [rad]")
     ax.set_title(f"{scenario} — yaw error (mean ± 1σ over {len(paths)} seeds)")
-    ax.legend(); ax.grid(alpha=0.3)
+    _legend_right(ax); ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(out / f"{scenario}_error_yaw.{fmt}"); plt.close(fig)
 
@@ -458,7 +467,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
         ax.set_xlabel("time [s]")
         ax.set_ylabel(r"estimated position uncertainty  $\sigma_{xy}$ [m]")
         ax.set_title(f"{scenario} — filter-estimated uncertainty over time")
-        ax.legend(fontsize=8); ax.grid(alpha=0.3, which="both")
+        _legend_right(ax, fontsize=10); ax.grid(alpha=0.3, which="both")
         fig.tight_layout()
         fig.savefig(out / f"{scenario}_uncertainty.{fmt}")
     plt.close(fig)
@@ -478,7 +487,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
         ax.set_yscale("symlog", linthresh=1.0)
         ax.set_xlabel("time [s]"); ax.set_ylabel("NEES")
         ax.set_title(f"{scenario} — filter consistency (NEES, 3 DoF)")
-        ax.legend(); ax.grid(alpha=0.3)
+        _legend_right(ax); ax.grid(alpha=0.3)
         fig.tight_layout()
         fig.savefig(out / f"{scenario}_nees.{fmt}")
     plt.close(fig)
@@ -490,7 +499,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
         plot_band(ax, t, stk, COLOURS["pf"], "PF ESS")
         ax.set_xlabel("time [s]"); ax.set_ylabel("Effective Sample Size")
         ax.set_title(f"{scenario} — PF Effective Sample Size")
-        ax.grid(alpha=0.3); ax.legend()
+        ax.grid(alpha=0.3); _legend_right(ax)
         fig.tight_layout()
         fig.savefig(out / f"{scenario}_pf_ess.{fmt}")
         plt.close(fig)
@@ -509,7 +518,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
         ax.set_ylabel("# landmarks in scan")
         ax.set_title(f"{scenario} — landmark detections per tick "
                      f"(max={max_seen}, sum over run={total})")
-        ax.grid(alpha=0.3); ax.legend()
+        ax.grid(alpha=0.3); _legend_right(ax)
         fig.tight_layout()
         fig.savefig(out / f"{scenario}_landmark_detections.{fmt}")
         plt.close(fig)
@@ -535,7 +544,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
     ax.set_xlabel("x [m]"); ax.set_ylabel("y [m]")
     ax.set_title(f"{scenario} — trajectories ({len(paths)} seed runs)")
     ax.set_aspect("equal", adjustable="datalim")
-    ax.legend(loc="best"); ax.grid(alpha=0.3)
+    _legend_right(ax); ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(out / f"{scenario}_trajectory.{fmt}")
     plt.close(fig)
@@ -704,7 +713,7 @@ def plot_per_scenario(scenario: str, paths: list[Path], filters, out: Path,
                 ax.set_xlim(-2.0, 10.0)
                 ax.set_ylim(-2.0, 8.0)
             ax.set_aspect("equal", adjustable="box")
-            ax.legend(loc="best", fontsize=8); ax.grid(alpha=0.3)
+            _legend_right(ax, fontsize=9); ax.grid(alpha=0.3)
             fig.tight_layout()
             fig.savefig(out / f"{scenario}_{f}_localization.{fmt}")
             plt.close(fig)
@@ -786,7 +795,7 @@ def grouped_bar(scenarios, values_per_filter, errors_per_filter, filters,
     ax.set_title(title)
     if log:
         ax.set_yscale("log")
-    ax.legend()
+    _legend_right(ax)
     ax.grid(True, axis="y", alpha=0.3)
     fig.tight_layout()
     fig.savefig(out_path)
