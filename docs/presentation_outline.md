@@ -1,6 +1,6 @@
 # PRO-LAB Presentation — Slide Outline & Speaker Notes
 
-**Talk: 10 minutes · ~11 slides · ~50 s each.** Figures are in
+**Talk: 10 minutes · ~12 slides · ~50 s each.** Figures are in
 `results/wrong_init/fav_plots/`. Drop them into your SharePoint deck slide by
 slide; the *Notes* are what to say.
 
