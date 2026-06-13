@@ -55,7 +55,7 @@ All experiments run on a simulated TurtleBot~4 (differential drive) in Gazebo~\c
 \begin{figure*}[!t]
     \centering
     \includegraphics[width=0.96\textwidth]{images/dataflow.png}
-    \caption{System data flow. Wheel odometry, \texttt{/cmd\_vel} and the IMU drive every filter's motion model; the camera image is turned by the AprilTag detector into \texttt{/landmarks/observations} consumed by the landmark filters (KF, EKF), while \texttt{/scan} drives the scan filters (EKF-LF, PF, AMCL). Each filter publishes \texttt{/<filter>/pose}; ground truth feeds the metrics only, never a filter.}
+    \caption{System data flow. Wheel odometry (\texttt{/odom}) and the IMU drive the motion model of KF, EKF and EKF-LF (and AMCL via TF); the PF instead uses the \texttt{/cmd\_vel} velocity command. The camera image is turned by the AprilTag detector into \texttt{/landmarks/observations}, consumed by the landmark filters (KF, EKF), while \texttt{/scan} drives the scan filters (EKF-LF, PF, AMCL). Each filter publishes \texttt{/<filter>/pose}; ground truth feeds the metrics only, never a filter.}
     \label{fig:dataflow}
 \end{figure*}
 
