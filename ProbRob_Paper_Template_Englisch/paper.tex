@@ -172,6 +172,9 @@ We compared five localization filters under seven adverse-initialization scenari
 We deliberately kept the two modalities separate to isolate their effect; the natural next step is therefore to fuse them, using scans for nominal accuracy and tags for recovery, and to test on hardware, where odometry drift would further favour corrected filters. Making the scan filters self-recover in such symmetric maps needs richer global cues than the likelihood field: sensor-resetting or mixture proposals that draw hypotheses directly from the observation~\cite{Thrun2005}, appearance-based place recognition~\cite{Cummins2008,Lowry2016}, or multi-hypothesis tracking that follows all symmetric candidates until motion disambiguates. Active perception, in which the robot deliberately turns its limited-field-of-view camera toward an expected landmark after a likelihood collapse, is a further route to faster and more reliable kidnap recovery~\cite{Cadena2016}. The benchmark, simulation, and data are released to support reproducible follow-up work~\cite{Kummerle2009}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Flush all pending figure floats before the references so the bibliography is
+% always last (otherwise deferred full-width figures land after it).
+\clearpage
 {\small
 \bibliographystyle{IEEEtranS}
 \bibliography{refs}
