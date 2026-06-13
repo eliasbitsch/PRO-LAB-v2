@@ -37,6 +37,10 @@ public:
     x_ = x0; P_ = Sigma0; R_ = R_proc;
   }
 
+  // Re-seed the belief (mean + covariance) without touching the process noise.
+  // Used for AMCL-style global re-init from an RViz "2D Pose Estimate".
+  void setBelief(const Vec3& x0, const Mat3& Sigma0) { x_ = x0; P_ = Sigma0; }
+
   // Unicycle predict with motion Jacobian G.
   //   μ̄_t = g(u_t, μ_{t-1})
   //   Σ̄_t = G_t · Σ_{t-1} · G_tᵀ + R_t

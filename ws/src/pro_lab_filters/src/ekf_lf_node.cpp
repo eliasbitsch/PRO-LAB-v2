@@ -105,6 +105,25 @@ public:
         ekf_.updateImuYaw(pro_lab_filters::quat_to_yaw(m->orientation), r_yaw_imu_);
       });
 
+    // AMCL-style global re-init from RViz "2D Pose Estimate". VOLATILE QoS so
+    // RViz's (volatile) /initialpose reaches us (a transient_local sub would be
+    // QoS-incompatible). Lets the operator rescue this scan-EKF, which is
+    // unimodal and otherwise stays stuck in a wrong, symmetric basin.
+    initpose_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+      "/initialpose", rclcpp::QoS(10).reliable(),
+      [this](geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr m) {
+        Eigen::Vector3d mean(m->pose.pose.position.x, m->pose.pose.position.y,
+                             pro_lab_filters::quat_to_yaw(m->pose.pose.orientation));
+        Eigen::Matrix3d P0 = Eigen::Matrix3d::Zero();
+        P0(0, 0) = std::max(m->pose.covariance[0],  0.25);
+        P0(1, 1) = std::max(m->pose.covariance[7],  0.25);
+        P0(2, 2) = std::max(m->pose.covariance[35], 0.07);
+        ekf_.setBelief(mean, P0);
+        RCLCPP_INFO(get_logger(),
+          "ekf_lf re-init from /initialpose: (%.2f, %.2f, %.2f rad)",
+          mean(0), mean(1), mean(2));
+      });
+
     // Map: transient_local QoS to receive the latched /map from the
     // standalone map_server in the launch.
     rclcpp::QoS map_qos(10);
@@ -214,6 +233,7 @@ private:
 
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr initpose_sub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pub_;
