@@ -804,7 +804,7 @@ def grouped_bar(scenarios, values_per_filter, errors_per_filter, filters,
     x = np.arange(len(scenarios))
     n = len(filters)
     w = 0.8 / max(n, 1)
-    fig, ax = plt.subplots(figsize=(max(6, 0.8 * len(scenarios) * n / 3), 4.5))
+    fig, ax = plt.subplots(figsize=(max(8, 1.0 * len(scenarios) * n / 3), 6.0))
     for i, f in enumerate(filters):
         means = values_per_filter.get(f, [np.nan] * len(scenarios))
         errs  = errors_per_filter.get(f,  [0.0] * len(scenarios))
