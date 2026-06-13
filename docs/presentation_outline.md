@@ -136,8 +136,10 @@ Elias Bitsch · Probabilistic Robotics Lab, FH Technikum Wien · Task 2510331021
 - **The observation model, not the filter, decides recovery** from a wrong start.
 - Caveat (honest): under nominal conditions landmarks add noise, not accuracy —
   the benefit is robustness + bounded uncertainty.
-- Future: fuse scan + tags, test on hardware, active perception (turn the camera
-  toward an expected tag after a likelihood collapse).
+- Future: we kept the modalities *separate by design* to isolate the effect;
+  the natural next step is to **fuse** them (scan for accuracy, tags for
+  recovery), plus hardware tests and active perception (turn the camera toward
+  an expected tag after a likelihood collapse).
 
 > *Notes:* "Takeaway: don't reach for a fancier filter to survive a bad start —
 > reach for an identifiable measurement. Tags cost you environment
