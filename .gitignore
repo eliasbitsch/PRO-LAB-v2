@@ -26,6 +26,3 @@ NEURA_MAV.glb
 *.fdb_latexmk
 *.synctex.gz
 *.toc
-
-# Claude tooling (local only)
-.claude/
