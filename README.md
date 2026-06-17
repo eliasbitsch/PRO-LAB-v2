@@ -30,6 +30,11 @@ symmetric warehouse - ROS 2 Jazzy + Gazebo Harmonic.
 and plots in [`results/wrong_init/fav_plots/`](results/wrong_init/fav_plots/),
 write-up in [`ProbRob_Paper_Template_Englisch/paper.pdf`](ProbRob_Paper_Template_Englisch/).
 
+The mandatory process- (Q) and measurement-noise (R) sweep (`q_low`/`q_high`,
+`r_low`/`r_high`, init at truth so noise is the only varied factor) is reported
+via filter consistency (NEES): too little noise makes a filter over-confident,
+too much makes it conservative. See the paper's "Noise sensitivity" section.
+
 ---
 
 ## Quick start
@@ -70,7 +75,7 @@ docker exec -u 0 prolab_jazzy bash /home/ros/ws/src/pro_lab_filters/scripts/prov
 |---|---|---|
 | 🎮 **Demo** | `scripts/run_demo.sh` | Manual RViz session: drive with the teleop panel, **kidnap** the robot with the Kidnap arrow tool, watch KF/EKF recover on their own while you rescue PF/AMCL with a **2D Pose Estimate**. |
 | 🎯 **Single run** | `scripts/run_single.sh --filter all --scenario offset_5m` | One scenario, all filters, writes CSVs for inspection. |
-| 📊 **Multi-seed sweep** | `scripts/run_wrong_init_sweep.sh` | The paper data: 7 scenarios × 10 seeds (~90 min), container-restarted between runs for a clean slate. |
+| 📊 **Multi-seed sweep** | `scripts/run_wrong_init_sweep.sh` | The paper data: 11 scenarios × 10 seeds (~2 h), container-restarted between runs for a clean slate. Run a subset with e.g. `SCENARIOS="q_low q_high r_low r_high" bash scripts/run_wrong_init_sweep.sh` for just the noise sweep. |
 
 Then analyze and build the paper:
 
@@ -131,7 +136,8 @@ C++; only the launch files and the plotting/analysis stay in Python.
 ### Scenarios
 
 `correct_init` · `offset_1m` · `offset_5m` · `wrong_yaw_pi2` ·
-`overconfident_wrong` · `underconfident` · `kidnapped` (two unannounced teleports).
+`overconfident_wrong` · `underconfident` · `kidnapped` (two unannounced teleports) ·
+`q_low` · `q_high` · `r_low` · `r_high` (mandatory process-/measurement-noise sweep).
 
 ---
 

@@ -59,13 +59,33 @@ All experiments run on a simulated TurtleBot~4 (differential drive) in Gazebo~\c
     \label{fig:dataflow}
 \end{figure*}
 
+\subsection{Filter fundamentals}
+All four research filters are recursive Bayes filters~\cite{Thrun2005}: each maintains a belief over the robot pose and alternates a \emph{predict} step (advance the belief through a motion model) with a \emph{correct} step (reweight it by a measurement likelihood). They differ in how the belief is represented and how non-linearity is handled. The \textbf{KF} assumes a Gaussian belief and \emph{linear} models, giving a closed-form optimal update; to keep both the motion and the measurement models linear it cannot use the trigonometric unicycle, so it instead carries a six-dimensional constant-velocity state and learns the velocities passively. The \textbf{EKF} keeps the Gaussian belief but linearises the non-linear unicycle and range--bearing models about the current mean via their Jacobians $\mathbf{G}_t,\mathbf{H}_t$. The \textbf{EKF-LF} is the same Gaussian machinery with the landmark correction replaced by a lidar likelihood-field update. The \textbf{PF} drops the Gaussian assumption entirely: it represents the belief by $N$ weighted pose samples (particles), so it can be \emph{multimodal} and, in principle, localise globally and recover from kidnapping --- at $O(N)$ cost per step. Table~\ref{tab:filters} summarises the state vector, control input, and models of each filter.
+
+\begin{table}[!t]
+\centering
+\setlength{\tabcolsep}{0.4em}
+{\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|c|c|l|}
+\hline
+\textbf{Filter} & \textbf{State $\mathbf{x}$} & \textbf{Input $\mathbf{u}$} & \textbf{Correction} \\ \hline
+KF     & $(x,y,\theta,\dot x,\dot y,\dot\theta)$ & --- & landmark $(x,y)$, IMU \\ \hline
+EKF    & $(x,y,\theta)$ & $(v,\omega)$ \texttt{/odom}     & range--bearing, IMU \\ \hline
+EKF-LF & $(x,y,\theta)$ & $(v,\omega)$ \texttt{/cmd\_vel} & scan likelihood field \\ \hline
+PF     & $\{(x,y,\theta)^{[k]}\}$ & $(v,\omega)$ \texttt{/cmd\_vel} & scan likelihood field \\ \hline
+AMCL   & $\{(x,y,\theta)^{[k]}\}$ & \texttt{/odom} (TF) & scan (beam model) \\ \hline
+\end{tabular}}
+\caption{Per-filter state vector, control input, and measurement correction. The KF carries world-frame velocities $(\dot x,\dot y,\dot\theta)$ in its state (constant-velocity model, no control input); the others use the three-dimensional unicycle pose with a velocity/odometry control. PF and AMCL hold $N$ pose samples rather than a single Gaussian.}
+\label{tab:filters}
+\end{table}
+
 \subsection{Motion and measurement models}
 All filters consume the same control input. The EKF uses the odometry motion model~\cite{Thrun2005} on the unicycle state $\mathbf{x}=(x,y,\theta)^\top$, propagating
 \begin{equation}
 \mathbf{x}_t = \mathbf{x}_{t-1} +
 \begin{bmatrix} \Delta s\cos(\theta_{t-1}+\tfrac{\Delta\theta}{2})\\ \Delta s\sin(\theta_{t-1}+\tfrac{\Delta\theta}{2})\\ \Delta\theta \end{bmatrix},
 \end{equation}
-with covariance $\mathbf{P}_t=\mathbf{G}_t\mathbf{P}_{t-1}\mathbf{G}_t^\top+\mathbf{R}_t$, where $\mathbf{G}_t$ is the motion Jacobian. The linear KF uses a six-dimensional constant-velocity model as a deliberately simple reference. The \emph{landmark} filters (KF, EKF) correct on a range--bearing observation of a known map landmark $\mathbf{m}_i=(m_{i,x},m_{i,y})$,
+with covariance $\mathbf{P}_t=\mathbf{G}_t\mathbf{P}_{t-1}\mathbf{G}_t^\top+\mathbf{R}_t$, where $\mathbf{G}_t$ is the motion Jacobian. Here $\Delta s$ and $\Delta\theta$ are the translation and rotation increments read from wheel odometry (\texttt{/odom}). The linear KF instead carries the six-dimensional state $\mathbf{x}=(x,y,\theta,\dot x,\dot y,\dot\theta)^\top$ and propagates it with a constant-velocity model $\mathbf{x}_t=\mathbf{A}\,\mathbf{x}_{t-1}$, $\mathbf{A}=\big[\begin{smallmatrix}\mathbf{I} & \Delta t\,\mathbf{I}\\ \mathbf{0} & \mathbf{I}\end{smallmatrix}\big]$, which is exactly linear and therefore takes no control input: the velocities $(\dot x,\dot y,\dot\theta)$ are not commanded but inferred from the sequence of position and yaw measurements, with the process noise on the velocity block absorbing the unmodelled accelerations. This keeps the KF a genuine linear filter (any trigonometric unicycle term would force a Jacobian, i.e.\ an EKF) and serves as a deliberately simple reference. The \emph{landmark} filters (KF, EKF) correct on a range--bearing observation of a known map landmark $\mathbf{m}_i=(m_{i,x},m_{i,y})$,
 \begin{equation}
 \mathbf{z}=\begin{bmatrix} r \\ \phi \end{bmatrix}=
 \begin{bmatrix} \sqrt{(m_{i,x}-x)^2+(m_{i,y}-y)^2} \\ \mathrm{atan2}(m_{i,y}-y,\,m_{i,x}-x)-\theta \end{bmatrix}+\mathbf{v},
@@ -76,7 +96,7 @@ with the standard EKF gain $\mathbf{K}_t=\mathbf{P}_t\mathbf{H}_t^\top(\mathbf{H
 The decisive design choice is that landmark \emph{identity} is measured, not assumed. Each pillar carries a unique AprilTag~\cite{Olson2011} of the \texttt{tag36h11} family. The robot's RGB camera ($1280\times720$) detects tags with the AprilTag-3 detector; the tag corners and known tag size yield the full tag pose by perspective-$n$-point, from which we derive the range, bearing, and, most importantly, the tag identity that selects the map landmark in~(2). No ground-truth pose enters this pipeline. Against simulator ground truth the resulting measurements are accurate to below one centimetre in range and $0.25^\circ$ in bearing. Because the camera looks forward ($\approx 71^\circ$ field of view), the robot typically sees only one tag at a time, a realistic limitation that yields sparser and geometrically weaker updates than an omnidirectional sensor.
 
 \subsection{Scenarios, metrics, and protocol}
-We define seven scenarios that share the same scripted trajectory but differ in the initial belief: \texttt{correct\_init} (nominal); \texttt{offset\_1m} and \texttt{offset\_5m} (translated start); \texttt{wrong\_yaw\_pi2} ($90^\circ$ heading error); \texttt{overconfident\_wrong} (wrong start with a tight covariance); \texttt{underconfident} (correct start with an inflated covariance); and \texttt{kidnapped} (two unannounced teleports during the run). For each filter we report the position error RMSE$_{xy}$, the convergence rate (the fraction of seeds whose final position error falls below $0.20$\,m), the per-tick wall-clock runtime, and the asymptotic complexity. Every scenario is repeated for ten random seeds that perturb the sampled initial pose and the particle-filter randomness; we report the mean and one standard deviation over seeds. The full sweep comprises $7\times10=70$ runs.
+We define eleven scenarios that share the same scripted trajectory. Seven probe the \emph{initial belief}: \texttt{correct\_init} (nominal); \texttt{offset\_1m} and \texttt{offset\_5m} (translated start); \texttt{wrong\_yaw\_pi2} ($90^\circ$ heading error); \texttt{overconfident\_wrong} (wrong start with a tight covariance); \texttt{underconfident} (correct start with an inflated covariance); and \texttt{kidnapped} (two unannounced teleports during the run). Four further scenarios cover the mandatory \emph{noise} sweep, varying the filters' noise tuning while initializing at the truth so that the noise is the only changing factor: \texttt{q\_low}/\texttt{q\_high} scale every process-noise term by $\tfrac{1}{10}$/$10\times$ its default, and \texttt{r\_low}/\texttt{r\_high} do the same for every measurement-noise term, with \texttt{correct\_init} serving as the default midpoint. For each filter we report the position error RMSE$_{xy}$, the convergence rate (the fraction of seeds whose final position error falls below $0.20$\,m), the filter consistency via the normalized estimation error squared (NEES, over the 3-DOF pose, ideally $\approx 3$), the per-tick wall-clock runtime, and the asymptotic complexity. Every scenario is repeated for ten random seeds that perturb the sampled initial pose and the particle-filter randomness; we report the mean and one standard deviation over seeds. The full sweep comprises $11\times10=110$ runs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Experimental Results}
@@ -161,13 +181,41 @@ The advantage of landmarks is specific to bad initialization. Under \texttt{corr
     \label{fig:runtime}
 \end{figure*}
 
+\subsection{Noise sensitivity: process (Q) and measurement (R)}
+The mandatory noise sweep isolates the effect of the filters' noise tuning by initializing at the truth and varying only Q or R. Because the start is correct, the position error stays low throughout ($0.08$--$0.27$\,m), with one telling exception: under \texttt{r\_low} the scan EKF-LF over-trusts an aliased lidar and degrades to $0.63$\,m. The tuning therefore acts almost entirely on \emph{confidence}, not nominal accuracy, which is exactly what the NEES consistency metric exposes (Fig.~\ref{fig:noise}, Table~\ref{tab:nees}). On both axes the mean NEES falls monotonically as the noise grows: too little noise makes a filter \emph{over-confident} (covariance too tight, NEES~$\gg 3$), too much makes it \emph{conservative} (NEES~$\ll 3$). The Gaussian landmark filters KF and EKF are the best calibrated, sitting near the consistent line at the default and bracketing it across the sweep. The sample- and scan-based filters are chronically over-confident: EKF-LF and PF already exceed NEES~$=10$ at the default, and under \texttt{r\_low} the PF's particle cloud collapses to a near-singular covariance (NEES~$\sim\!10^{8}$), the textbook symptom of particle impoverishment when the measurement model is trusted too far. AMCL is conservative throughout (NEES~$<1$), reflecting its deliberately inflated motion model. The practical reading matches the task's framing: Q sets how much the filter trusts its own motion model and R how much it trusts its sensors, and only a balanced choice yields a statistically consistent, trustworthy covariance.
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=0.96\textwidth]{images/noise_sensitivity.png}
+    \caption{Filter consistency (mean NEES over the 3-DOF pose, log scale, ten seeds) versus process noise Q (left) and measurement noise R (right), with \texttt{correct\_init} as the default midpoint. NEES decreases monotonically with added noise and crosses the consistent line (dof~$=3$): low noise yields over-confident filters, high noise conservative ones. Bars above the cap are labelled with their value.}
+    \label{fig:noise}
+\end{figure*}
+
+\begin{table}[!t]
+\centering
+\setlength{\tabcolsep}{0.45em}
+{\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+ & \multicolumn{3}{c|}{\textbf{Process noise Q}} & \multicolumn{2}{c|}{\textbf{Meas.\ noise R}} \\ \cline{2-6}
+\textbf{Filter} & low & default & high & low & high \\ \hline
+KF      & $2.1$  & $1.0$  & $0.36$ & $3.6$            & $0.25$ \\ \hline
+EKF     & $1.8$  & $0.57$ & $0.13$ & $1.4$            & $0.20$ \\ \hline
+EKF-LF  & $13.6$ & $4.0$  & $1.9$  & $102.6$          & $0.88$ \\ \hline
+PF      & $12.5$ & $11.9$ & $4.1$  & $\sim\!10^{8}$   & $0.92$ \\ \hline
+AMCL    & $1.2$  & $0.48$ & $0.06$ & $0.77$           & $0.06$ \\ \hline
+\end{tabular}}
+\caption{Mean NEES (consistency over the 3-DOF pose; consistent $\approx 3$) under the Q and R sweep, averaged over ten seeds. \texttt{correct\_init} is the shared default. Values fall as noise rises on both axes; KF/EKF stay closest to consistent, while EKF-LF and PF are markedly over-confident at low noise.}
+\label{tab:nees}
+\end{table}
+
 \subsection{Threats to validity}
 The study is in simulation, so odometry is more benign than on hardware, which flatters dead reckoning in the nominal case. The forward-facing camera limits landmark visibility, a realistic but scenario-dependent constraint. Finally, fiducials require instrumenting the environment; our claim is not that tags are universally preferable but that, where identifiable landmarks are available, they convert the recovery problem from intractable to easy in exactly the aliased settings that defeat scan matching. The scan-based filters retain real advantages we do not dispute: they need no environment instrumentation, work in any mapped space, and---unlike the unimodal Gaussian landmark filters---can represent global, multi-modal uncertainty at all; indeed the KF and EKF localize globally only because the tag identity hands them the correspondence. The result is therefore a trade-off, not a verdict: scan matching is universal but aliasing-vulnerable under a wrong start, whereas identifiable landmarks buy autonomous recovery at the cost of instrumenting the environment.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Summary and Outlook}
 
-We compared five localization filters under seven adverse-initialization scenarios on a TurtleBot~4 in a perceptually symmetric warehouse, with the four research filters implemented from first principles and landmark identity measured honestly from camera-read AprilTags. Across ten seeds per scenario, filters that observe identifiable landmarks recovered from large offsets, wrong heading, miscalibrated covariance, and double kidnapping, whereas scan-based filters, including the Nav2 AMCL baseline, were defeated by perceptual aliasing and diverged by up to $17$\,m. The advantage was specific to bad initialization and disappeared under nominal conditions, where all filters localized to within $0.15$\,m. The decisive factor for recovery is therefore the identifiability of the observation model, not the sophistication of the estimator.
+We compared five localization filters across eleven scenarios on a TurtleBot~4 in a perceptually symmetric warehouse, with the four research filters implemented from first principles and landmark identity measured honestly from camera-read AprilTags. Across ten seeds per scenario, filters that observe identifiable landmarks recovered from large offsets, wrong heading, miscalibrated covariance, and double kidnapping, whereas scan-based filters, including the Nav2 AMCL baseline, were defeated by perceptual aliasing and diverged by up to $17$\,m. The advantage was specific to bad initialization and disappeared under nominal conditions, where all filters localized to within $0.15$\,m. The dedicated process- and measurement-noise sweep confirmed the expected confidence trade-off: NEES fell monotonically from over-confident at low noise to conservative at high noise, with the Gaussian landmark filters staying best calibrated and the sample-based filters over-confident. The decisive factor for recovery is therefore the identifiability of the observation model, not the sophistication of the estimator.
 
 We deliberately kept the two modalities separate to isolate their effect; the natural next step is therefore to fuse them, using scans for nominal accuracy and tags for recovery, and to test on hardware, where odometry drift would further favour corrected filters. Making the scan filters self-recover in such symmetric maps needs richer global cues than the likelihood field: sensor-resetting or mixture proposals that draw hypotheses directly from the observation~\cite{Thrun2005}, appearance-based place recognition~\cite{Cummins2008,Lowry2016}, or multi-hypothesis tracking that follows all symmetric candidates until motion disambiguates. Active perception, in which the robot deliberately turns its limited-field-of-view camera toward an expected landmark after a likelihood collapse, is a further route to faster and more reliable kidnap recovery~\cite{Cadena2016}. The benchmark, simulation, and data are released to support reproducible follow-up work~\cite{Kummerle2009}.
 

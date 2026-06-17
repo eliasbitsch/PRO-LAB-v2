@@ -1,20 +1,38 @@
-# R variation: LOW measurement noise.
-# Filter trusts /pose & /imu strongly. Estimate snaps to measurements;
-# brittle if measurements are actually noisy in reality (over-confident).
-# Truth spawn: (-8.0, -0.5, yaw=0).
+# Measurement-noise (R) variation -- LOW.
+# Mandatory experiment "Measurement Noise (R) Variation": the filter trusts its
+# sensors strongly. Expected: estimate snaps to each measurement (responsive),
+# covariance collapses quickly -- accurate when sensors are clean, but brittle /
+# over-confident if the measurements are actually noisy.
+#
+# Isolation: init is AT the truth (same as correct_init) so the ONLY varied
+# factor versus the baseline is the measurement noise. Every per-filter
+# measurement-noise parameter is scaled down by ~10x its default; process noise
+# (Q) is left at the default. Compare against correct_init (default R) / r_high.
 /**:
   ros__parameters:
+    # init at truth (identical to correct_init) -- isolate R
     init_distribution: gaussian
-    init_x:       -8.00
-    init_y:       -0.50
+    init_x:        0.00
+    init_y:        0.00
     init_yaw:      0.00
     init_spread_xy:  0.10
     init_spread_yaw: 0.05
     init_cov:        0.01
     num_particles:   500
-    # Measurement noise - small R means "trust the sensors"
-    r_yaw_imu:  0.005
-    r_pose_xy:  0.005
-    r_pose_yaw: 0.005
-    # Lidar likelihood
-    scan_sigma: 0.05
+
+    # --- measurement noise R, ~0.1x default (LOW) ---
+    # shared IMU yaw variance (all filters): default 0.02 (PF 0.05)
+    r_yaw_imu: 0.002
+    # KF measurement variances: defaults r_omega_imu 0.05, r_landmark_xy 0.05,
+    # r_odom_v 0.04, r_odom_omega 0.05
+    r_omega_imu:   0.005
+    r_landmark_xy: 0.005
+    r_odom_v:      0.004
+    r_odom_omega:  0.005
+    # EKF range/bearing landmark variances: defaults 0.01 / 0.0025
+    r_landmark_range:   0.001
+    r_landmark_bearing: 0.00025
+    # EKF-LF likelihood-field std sigma_hit: default 0.10 (metres)
+    sigma_hit:  0.01
+    # PF scan likelihood std scan_sigma: default 0.20 (metres)
+    scan_sigma: 0.02

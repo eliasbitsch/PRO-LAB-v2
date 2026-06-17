@@ -1,20 +1,32 @@
-# Q variation: LOW process noise.
-# The filter strongly trusts its motion model, weakly trusts measurements.
-# Expected: estimate is smooth but slow to react to discrepancies; if init
-# is wrong it lingers. Good for understanding "stiff" vs "responsive" filters.
-# Truth spawn: (-8.0, -0.5, yaw=0).
+# Process-noise (Q) variation -- LOW.
+# Mandatory experiment "Process Noise (Q) Variation": the filter strongly
+# trusts its motion model and weakly trusts measurements. Expected: smooth but
+# slow to react ("stiff"); covariance shrinks fast and can become over-tight.
+#
+# Isolation: init is AT the truth (same as correct_init) so the ONLY varied
+# factor versus the baseline is the process noise. Every per-filter process-
+# noise parameter is scaled down by ~10x its default; measurement noise (R) is
+# left at the default. Compare against correct_init (default Q) and q_high.
 /**:
   ros__parameters:
-    # init at truth so the only varied factor is Q
+    # init at truth (identical to correct_init) -- isolate Q
     init_distribution: gaussian
-    init_x:       -8.00
-    init_y:       -0.50
+    init_x:        0.00
+    init_y:        0.00
     init_yaw:      0.00
     init_spread_xy:  0.10
     init_spread_yaw: 0.05
     init_cov:        0.01
     num_particles:   500
-    # Process noise - small means "trust the model"
-    q_scale:        0.005           # KF/EKF
-    motion_noise_v: 0.005           # PF
-    motion_noise_w: 0.005           # PF
+
+    # --- process noise Q, ~0.1x default (LOW) ---
+    # KF (q_pos/q_yaw/q_vel/q_omega): defaults 0.01/0.01/0.50/0.20
+    q_pos:    0.001
+    q_yaw:    0.001
+    q_vel:    0.05
+    q_omega:  0.02
+    # EKF + EKF-LF (q_scale): default 0.05
+    q_scale:  0.005
+    # PF motion noise (motion_noise_v/w): default 0.05
+    motion_noise_v: 0.005
+    motion_noise_w: 0.005

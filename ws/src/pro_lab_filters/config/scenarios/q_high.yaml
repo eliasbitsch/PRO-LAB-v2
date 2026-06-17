@@ -1,19 +1,32 @@
-# Q variation: HIGH process noise.
-# The filter weakly trusts its motion model, strongly trusts measurements.
-# Expected: estimate is jumpy/noisy following each /pose; covariance stays
-# wide; PF particles spread aggressively per predict step.
-# Truth spawn: (-8.0, -0.5, yaw=0).
+# Process-noise (Q) variation -- HIGH.
+# Mandatory experiment "Process Noise (Q) Variation": the filter weakly trusts
+# its motion model and leans on the measurements. Expected: jumpy estimate,
+# wide/slow-shrinking covariance, PF particles spread aggressively per predict.
+#
+# Isolation: init is AT the truth (same as correct_init) so the ONLY varied
+# factor versus the baseline is the process noise. Every per-filter process-
+# noise parameter is scaled up by ~10x its default; measurement noise (R) is
+# left at the default. Compare against correct_init (default Q) and q_low.
 /**:
   ros__parameters:
+    # init at truth (identical to correct_init) -- isolate Q
     init_distribution: gaussian
-    init_x:       -8.00
-    init_y:       -0.50
+    init_x:        0.00
+    init_y:        0.00
     init_yaw:      0.00
     init_spread_xy:  0.10
     init_spread_yaw: 0.05
     init_cov:        0.01
     num_particles:   500
-    # Process noise - large means "trust the measurements"
-    q_scale:        0.5
-    motion_noise_v: 0.5
-    motion_noise_w: 0.5
+
+    # --- process noise Q, ~10x default (HIGH) ---
+    # KF (q_pos/q_yaw/q_vel/q_omega): defaults 0.01/0.01/0.50/0.20
+    q_pos:    0.10
+    q_yaw:    0.10
+    q_vel:    5.00
+    q_omega:  2.00
+    # EKF + EKF-LF (q_scale): default 0.05
+    q_scale:  0.50
+    # PF motion noise (motion_noise_v/w): default 0.05
+    motion_noise_v: 0.50
+    motion_noise_w: 0.50
