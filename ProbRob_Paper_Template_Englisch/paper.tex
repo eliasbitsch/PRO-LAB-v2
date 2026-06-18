@@ -70,10 +70,10 @@ All four research filters are recursive Bayes filters~\cite{Thrun2005}: each mai
 \hline
 \textbf{Filter} & \textbf{State $\mathbf{x}$} & \textbf{Input $\mathbf{u}$} & \textbf{Correction} \\ \hline
 KF     & $(x,y,\theta,\dot x,\dot y,\dot\theta)$ & --- & landmark $(x,y)$, IMU \\ \hline
-EKF    & $(x,y,\theta)$ & $(v,\omega)$ \texttt{/odom}     & range--bearing, IMU \\ \hline
-EKF-LF & $(x,y,\theta)$ & $(v,\omega)$ \texttt{/cmd\_vel} & scan likelihood field \\ \hline
-PF     & $\{(x,y,\theta)^{[k]}\}$ & $(v,\omega)$ \texttt{/cmd\_vel} & scan likelihood field \\ \hline
-AMCL   & $\{(x,y,\theta)^{[k]}\}$ & \texttt{/odom} (TF) & scan (beam model) \\ \hline
+EKF    & $(x,y,\theta)$ & $(v,\omega)$ \texttt{/odom}     & landmark range--bearing, IMU \\ \hline
+EKF-LF & $(x,y,\theta)$ & $(v,\omega)$ \texttt{/cmd\_vel} & scan likelihood field, IMU \\ \hline
+PF     & $\{(x,y,\theta)^{[k]}\}$ & $(v,\omega)$ \texttt{/cmd\_vel} & scan likelihood field, IMU \\ \hline
+AMCL   & $\{(x,y,\theta)^{[k]}\}$ & \texttt{/odom} (TF) & scan likelihood field \\ \hline
 \end{tabular}}
 \caption{Per-filter state vector, control input, and measurement correction. The KF carries world-frame velocities $(\dot x,\dot y,\dot\theta)$ in its state (constant-velocity model, no control input); the others use the three-dimensional unicycle pose with a velocity/odometry control. PF and AMCL hold $N$ pose samples rather than a single Gaussian.}
 \label{tab:filters}
