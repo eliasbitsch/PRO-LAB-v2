@@ -14,9 +14,6 @@ results/
 # docker volumes / runtime
 docker/.env
 
-# large reference assets
-NEURA_MAV.glb
-
 # LaTeX build artifacts (keep .tex / .pdf / .bib / images)
 *.aux
 *.out
